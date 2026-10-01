@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "teton-talk",
+    "slug": "teton-talk",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "tetontalk",
+    "web": {
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": ["expo-router"]
+  }
+}
