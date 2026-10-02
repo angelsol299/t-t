@@ -15,29 +15,29 @@ const WINDOW_START =
   /\n#if os\(iOS\) \|\| os\(tvOS\)\n\s*window = UIWindow\(frame: UIScreen\.main\.bounds\)\n\s*factory\.startReactNative\([\s\S]*?\)\n#endif\n/;
 
 function withSceneAppDelegate(config) {
-  return withAppDelegate(config, (cfg) => {
-    if (cfg.modResults.language !== 'swift') {
+  return withAppDelegate(config, (appDelegate) => {
+    if (appDelegate.modResults.language !== 'swift') {
       throw new Error('withSceneLifecycle: expected a Swift AppDelegate');
     }
-    let src = cfg.modResults.contents;
-    if (src.includes('ExpoReactNativeFactoryProvider')) return cfg; // already adopted
-    if (!CLASS_DECL.test(src) || !WINDOW_START.test(src)) {
+    let swiftSource = appDelegate.modResults.contents;
+    if (swiftSource.includes('ExpoReactNativeFactoryProvider')) return appDelegate; // already adopted
+    if (!CLASS_DECL.test(swiftSource) || !WINDOW_START.test(swiftSource)) {
       throw new Error(
         'withSceneLifecycle: the generated AppDelegate no longer matches the expected template. ' +
           'Check whether the Expo template now adopts the UIScene life cycle and remove this plugin.',
       );
     }
-    src = src.replace(CLASS_DECL, 'class AppDelegate: ExpoAppDelegate, ExpoReactNativeFactoryProvider');
+    swiftSource = swiftSource.replace(CLASS_DECL, 'class AppDelegate: ExpoAppDelegate, ExpoReactNativeFactoryProvider');
     // The scene delegate creates the window and starts React Native in it.
-    src = src.replace(WINDOW_START, '\n');
-    cfg.modResults.contents = src;
-    return cfg;
+    swiftSource = swiftSource.replace(WINDOW_START, '\n');
+    appDelegate.modResults.contents = swiftSource;
+    return appDelegate;
   });
 }
 
 function withSceneManifest(config) {
-  return withInfoPlist(config, (cfg) => {
-    cfg.modResults.UIApplicationSceneManifest = {
+  return withInfoPlist(config, (infoPlist) => {
+    infoPlist.modResults.UIApplicationSceneManifest = {
       UIApplicationSupportsMultipleScenes: false,
       UISceneConfigurations: {
         UIWindowSceneSessionRoleApplication: [
@@ -48,7 +48,7 @@ function withSceneManifest(config) {
         ],
       },
     };
-    return cfg;
+    return infoPlist;
   });
 }
 

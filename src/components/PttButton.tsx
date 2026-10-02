@@ -49,104 +49,104 @@ function Timer({ startedAt, color, warnColor }: { startedAt: number; color: stri
 }
 
 export function PttButton({ state, onPressIn, onPressOut }: Props) {
-  let bg: string = colors.ink;
-  let fg: string = colors.ground;
+  let background: string = colors.ink;
+  let foreground: string = colors.ground;
   let extra: object | null = null;
   let content: React.ReactNode;
-  let a11y = 'Push to talk';
+  let accessibilityText = 'Push to talk';
 
   switch (state.kind) {
     case 'idle':
     case 'pending':
       if (state.kind === 'idle' && state.offline) {
-        bg = colors.surface;
-        fg = colors.ink;
+        background = colors.surface;
+        foreground = colors.ink;
         extra = styles.outlined;
       }
       content = (
         <>
-          <Text style={[type.caps, { color: fg }]}>
+          <Text style={[type.caps, { color: foreground }]}>
             {state.kind === 'idle' && state.offline ? 'Sends when back online' : 'Push to talk'}
           </Text>
           <View style={styles.bottom}>
-            <Text style={[type.headline, { color: fg }]}>{'Hold\nto talk'}</Text>
-            <Mic size={32} color={fg} strokeWidth={2} />
+            <Text style={[type.headline, { color: foreground }]}>{'Hold\nto talk'}</Text>
+            <Mic size={32} color={foreground} strokeWidth={2} />
           </View>
         </>
       );
       if (state.kind === 'pending') extra = { opacity: 0.88 };
       break;
     case 'live':
-      bg = colors.live;
-      fg = colors.liveText;
+      background = colors.live;
+      foreground = colors.liveText;
       extra = styles.ring;
-      a11y = "You're live";
+      accessibilityText = "You're live";
       content = (
         <>
           <View style={styles.top}>
-            <Text style={[type.caps, { color: fg }]}>On air</Text>
-            <Text style={[type.caps, { color: fg }]}>{state.listeners} hear you</Text>
+            <Text style={[type.caps, { color: foreground }]}>On air</Text>
+            <Text style={[type.caps, { color: foreground }]}>{state.listeners} hear you</Text>
           </View>
-          <LevelMeter level={state.level} bars={16} color={fg} />
+          <LevelMeter level={state.level} bars={16} color={foreground} />
           <View style={styles.bottom}>
-            <Text style={[type.headline, { color: fg }]}>{'You’re\nlive'}</Text>
-            <Timer startedAt={state.startedAt} color={fg} warnColor={colors.weakText} />
+            <Text style={[type.headline, { color: foreground }]}>{'You’re\nlive'}</Text>
+            <Timer startedAt={state.startedAt} color={foreground} warnColor={colors.weakText} />
           </View>
         </>
       );
       break;
     case 'local':
-      bg = colors.surface;
-      fg = colors.ink;
+      background = colors.surface;
+      foreground = colors.ink;
       extra = styles.outlined;
-      a11y = 'Recording';
+      accessibilityText = 'Recording';
       content = (
         <>
           <View style={styles.top}>
-            <Text style={[type.caps, { color: fg }]}>Recording</Text>
-            <Text style={[type.caps, { color: colors.n700 }]}>
+            <Text style={[type.caps, { color: foreground }]}>Recording</Text>
+            <Text style={[type.caps, { color: colors.neutral700 }]}>
               {state.offline ? 'Sends when back online' : 'Sends when complete'}
             </Text>
           </View>
-          <LevelMeter level={state.level} bars={16} color={fg} />
+          <LevelMeter level={state.level} bars={16} color={foreground} />
           <View style={styles.bottom}>
-            <Text style={[type.headline, { color: fg }]}>{'Saving\nmessage'}</Text>
-            <Timer startedAt={state.startedAt} color={fg} warnColor={colors.offline} />
+            <Text style={[type.headline, { color: foreground }]}>{'Saving\nmessage'}</Text>
+            <Timer startedAt={state.startedAt} color={foreground} warnColor={colors.offline} />
           </View>
         </>
       );
       break;
     case 'receiving':
-      bg = colors.talkBg;
-      fg = colors.talkText;
-      a11y = `${state.name} is talking`;
+      background = colors.talkBg;
+      foreground = colors.talkText;
+      accessibilityText = `${state.name} is talking`;
       content = (
         <>
-          <Text style={[type.caps, { color: fg }]}>Live</Text>
-          <LevelMeter level={state.level} bars={12} color={fg} />
+          <Text style={[type.caps, { color: foreground }]}>Live</Text>
+          <LevelMeter level={state.level} bars={12} color={foreground} />
           <View style={styles.bottom}>
             <View style={styles.flex}>
-              <Text style={[type.speaker, { color: fg }]} numberOfLines={1}>
+              <Text style={[type.speaker, { color: foreground }]} numberOfLines={1}>
                 {state.name}
               </Text>
               <Text style={[type.bodyStrong, styles.talking]}>is talking…</Text>
             </View>
-            <Timer startedAt={state.startedAt} color={fg} />
+            <Timer startedAt={state.startedAt} color={foreground} />
           </View>
         </>
       );
       break;
     case 'micOff':
-      bg = colors.surface;
-      fg = colors.ink;
+      background = colors.surface;
+      foreground = colors.ink;
       extra = styles.outlined;
-      a11y = 'Microphone off. Open settings to allow it';
+      accessibilityText = 'Microphone off. Open settings to allow it';
       content = (
         <>
-          <Text style={[type.caps, { color: colors.n700 }]}>Microphone off</Text>
+          <Text style={[type.caps, { color: colors.neutral700 }]}>Microphone off</Text>
           <View style={styles.bottom}>
-            <Text style={[type.headline, { color: fg }]}>{'Allow\nmicrophone'}</Text>
-            <MicOff size={32} color={fg} strokeWidth={2} />
+            <Text style={[type.headline, { color: foreground }]}>{'Allow\nmicrophone'}</Text>
+            <MicOff size={32} color={foreground} strokeWidth={2} />
           </View>
         </>
       );
@@ -162,9 +162,9 @@ export function PttButton({ state, onPressIn, onPressOut }: Props) {
       // A finger that drifts while talking must not end the transmission.
       pressRetentionOffset={{ top: 400, bottom: 200, left: 200, right: 200 }}
       accessibilityRole="button"
-      accessibilityLabel={a11y}
+      accessibilityLabel={accessibilityText}
       accessibilityHint={micOff ? undefined : 'Hold to talk, release to stop'}
-      style={[styles.button, { backgroundColor: bg }, extra]}
+      style={[styles.button, { backgroundColor: background }, extra]}
     >
       {content}
     </Pressable>
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
     padding: 22,
     justifyContent: 'space-between',
   },
-  outlined: { borderWidth: 2, borderColor: colors.n300 },
+  outlined: { borderWidth: 2, borderColor: colors.neutral300 },
   ring: { outlineWidth: 6, outlineStyle: 'solid', outlineColor: colors.liveRing },
   top: { flexDirection: 'row', justifyContent: 'space-between' },
   bottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
@@ -188,5 +188,5 @@ const styles = StyleSheet.create({
   meterBar: { width: 4, borderRadius: 4 },
   tabular: { fontVariant: ['tabular-nums'] },
   flex: { flex: 1 },
-  talking: { color: colors.talkSecondary, fontFamily: fonts.w600, marginTop: 4 },
+  talking: { color: colors.talkSecondary, fontFamily: fonts.semiBold, marginTop: 4 },
 });

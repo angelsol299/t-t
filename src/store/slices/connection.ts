@@ -19,11 +19,11 @@ const connection = createSlice({
   }),
   reducers: {
     netEvent(state, action: PayloadAction<NetEvent>) {
-      const prev = state.net;
+      const previousNet = state.net;
       const next = netReducer(state, action.payload);
       Object.assign(state, next);
-      if (prev !== 'offline' && next.net === 'offline') state.onlineAtDrop = state.online;
-      if (prev === 'recovering' && next.net !== 'recovering') state.missedOnReturn = null;
+      if (previousNet !== 'offline' && next.net === 'offline') state.onlineAtDrop = state.online;
+      if (previousNet === 'recovering' && next.net !== 'recovering') state.missedOnReturn = null;
     },
     setOnline(state, action: PayloadAction<number>) {
       state.online = action.payload;

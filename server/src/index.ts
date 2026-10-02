@@ -23,8 +23,8 @@ export function createServer({ port, dataDir, quiet }: ServerOptions) {
   const channel = createChannel(db, clips, log);
 
   const server = http.createServer(createHttpHandler(db, clips, channel));
-  const wss = new WebSocketServer({ server, path: '/ws' });
-  wss.on('connection', (ws) => channel.attach(ws));
+  const webSocketServer = new WebSocketServer({ server, path: '/ws' });
+  webSocketServer.on('connection', (clientSocket) => channel.attach(clientSocket));
 
   // Retention: recordings are kept for RETENTION_DAYS, then deleted.
   const sweep = () => {
@@ -46,7 +46,7 @@ export function createServer({ port, dataDir, quiet }: ServerOptions) {
     async close() {
       clearInterval(retention);
       channel.close();
-      wss.close();
+      webSocketServer.close();
       await new Promise((resolve) => server.close(resolve));
       db.close();
     },

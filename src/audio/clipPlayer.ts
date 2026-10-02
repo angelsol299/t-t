@@ -15,25 +15,25 @@ export interface PlayHandlers {
 export const clipPlayer = {
   play(bytes: Uint8Array, fromMs: number, handlers: PlayHandlers): number {
     clipPlayer.stop();
-    const ctx = audioContext();
-    const buf = mulawBuffer(bytes);
-    const durationMs = buf.duration * 1000;
+    const context = audioContext();
+    const audioBuffer = mulawBuffer(bytes);
+    const durationMs = audioBuffer.duration * 1000;
     const offsetMs = fromMs >= durationMs - 50 ? 0 : fromMs;
-    const src = ctx.createBufferSource();
-    src.buffer = buf;
-    src.connect(ctx.destination);
-    const my = ++token;
-    const startedAt = ctx.currentTime;
-    src.onEnded = () => {
-      if (my !== token) return; // stopped or replaced, not a natural end
+    const source = context.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(context.destination);
+    const playToken = ++token;
+    const startedAt = context.currentTime;
+    source.onEnded = () => {
+      if (playToken !== token) return; // stopped or replaced, not a natural end
       clipPlayer.stop();
       handlers.onEnd();
     };
-    src.start(startedAt, offsetMs / 1000);
-    node = src;
+    source.start(startedAt, offsetMs / 1000);
+    node = source;
     ticker = setInterval(() => {
-      if (my !== token) return;
-      handlers.onProgress(Math.min(durationMs, offsetMs + (ctx.currentTime - startedAt) * 1000));
+      if (playToken !== token) return;
+      handlers.onProgress(Math.min(durationMs, offsetMs + (context.currentTime - startedAt) * 1000));
     }, 100);
     return durationMs;
   },

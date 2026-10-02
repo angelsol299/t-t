@@ -16,5 +16,5 @@ export function ChannelHeader({ name, sub }: { name: string; sub: string }) {
 
 const styles = StyleSheet.create({
   wrap: { paddingTop: 12, paddingHorizontal: 20, paddingBottom: 24 },
-  sub: { color: colors.n700, marginTop: 8 },
+  sub: { color: colors.neutral700, marginTop: 8 },
 });

@@ -25,14 +25,14 @@ const heard = new Map<string, number>();
 
 function startNode(stream: Stream) {
   if (stream.node || muted) return;
-  const ctx = audioContext();
-  const node = ctx.createBufferQueueSource();
-  node.connect(ctx.destination);
+  const context = audioContext();
+  const node = context.createBufferQueueSource();
+  node.connect(context.destination);
   for (const bytes of stream.waiting) node.enqueueBuffer(mulawBuffer(bytes));
   stream.waiting = [];
   // Offset must be explicit: the library defaults it to -1 and then rejects
   // its own default ("offset must be a finite non-negative number: -1").
-  node.start(ctx.currentTime, 0);
+  node.start(context.currentTime, 0);
   stream.node = node;
 }
 

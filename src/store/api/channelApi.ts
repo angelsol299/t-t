@@ -32,8 +32,8 @@ export const channelApi = createApi({
       },
     }),
     markPlayed: builder.mutation<null, string>({
-      queryFn: (msgId) => {
-        registry.controller?.markPlayed(msgId);
+      queryFn: (messageId) => {
+        registry.controller?.markPlayed(messageId);
         return { data: null };
       },
     }),
@@ -54,9 +54,9 @@ export const upsertMessages = (list: ChannelMessage[]) => {
   });
 };
 
-export const setHeardBy = (msgId: string, heardBy: number) =>
+export const setHeardBy = (messageId: string, heardBy: number) =>
   channelApi.util.updateQueryData('getMessages', undefined, (draft) => {
-    const message = draft.find((existing) => existing.id === msgId);
+    const message = draft.find((existing) => existing.id === messageId);
     if (message) {
       message.heardBy = heardBy;
       messageCache.upsert([{ ...message }]);

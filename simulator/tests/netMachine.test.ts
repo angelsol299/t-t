@@ -40,11 +40,11 @@ describe('network state machine', () => {
   });
 
   it('high RTT means weak, and recovery needs a clearly good link (hysteresis)', () => {
-    let state = run([up(0), { type: 'pong', at: 1, rtt: 1200 }]);
+    let state = run([up(0), { type: 'pong', at: 1, roundTripMs: 1200 }]);
     expect(state.net).toBe('weak');
-    state = netReducer(state, { type: 'pong', at: 2, rtt: 650 }); // in between: stay weak
+    state = netReducer(state, { type: 'pong', at: 2, roundTripMs: 650 }); // in between: stay weak
     expect(state.net).toBe('weak');
-    state = netReducer(state, { type: 'pong', at: 3, rtt: 120 });
+    state = netReducer(state, { type: 'pong', at: 3, roundTripMs: 120 });
     expect(state.net).toBe('online');
   });
 

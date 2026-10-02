@@ -15,35 +15,35 @@ export function createClipStore(dataDir: string) {
   const root = path.join(dataDir, 'clips');
   fs.mkdirSync(root, { recursive: true });
 
-  const dir = (id: string) => path.join(root, id);
+  const directory = (id: string) => path.join(root, id);
   const assembled = (id: string) => path.join(root, `${id}.ul`);
 
   return {
     putChunk(id: string, seq: number, bytes: Uint8Array) {
-      fs.mkdirSync(dir(id), { recursive: true });
-      const target = path.join(dir(id), `${seq}.ul`);
-      const tmp = `${target}.tmp`;
-      fs.writeFileSync(tmp, bytes);
-      fs.renameSync(tmp, target); // atomic: a half-written chunk never counts as received
+      fs.mkdirSync(directory(id), { recursive: true });
+      const target = path.join(directory(id), `${seq}.ul`);
+      const tempPath = `${target}.tmp`;
+      fs.writeFileSync(tempPath, bytes);
+      fs.renameSync(tempPath, target); // atomic: a half-written chunk never counts as received
     },
     received(id: string): number[] {
-      if (!fs.existsSync(dir(id))) return [];
+      if (!fs.existsSync(directory(id))) return [];
       return fs
-        .readdirSync(dir(id))
+        .readdirSync(directory(id))
         .filter((file) => file.endsWith('.ul'))
         .map((file) => Number(file.slice(0, -3)))
         .sort((first, second) => first - second);
     },
     missing(id: string, total: number): number[] {
       const have = new Set(this.received(id));
-      const out: number[] = [];
-      for (let seq = 0; seq < total; seq++) if (!have.has(seq)) out.push(seq);
-      return out;
+      const output: number[] = [];
+      for (let seq = 0; seq < total; seq++) if (!have.has(seq)) output.push(seq);
+      return output;
     },
     /** Concatenates chunks 0..total-1 into one file. Caller checks `missing` first. */
     assemble(id: string, total: number): number {
       const parts: Buffer[] = [];
-      for (let seq = 0; seq < total; seq++) parts.push(fs.readFileSync(path.join(dir(id), `${seq}.ul`)));
+      for (let seq = 0; seq < total; seq++) parts.push(fs.readFileSync(path.join(directory(id), `${seq}.ul`)));
       const all = Buffer.concat(parts);
       fs.writeFileSync(assembled(id), all);
       return all.length;
@@ -53,7 +53,7 @@ export function createClipStore(dataDir: string) {
       return fs.existsSync(file) ? fs.readFileSync(file) : null;
     },
     remove(id: string) {
-      fs.rmSync(dir(id), { recursive: true, force: true });
+      fs.rmSync(directory(id), { recursive: true, force: true });
       fs.rmSync(assembled(id), { force: true });
     },
   };

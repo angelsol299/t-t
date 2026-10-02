@@ -12,7 +12,7 @@ import { MessageRow } from './MessageRow';
 
 export function MessageList() {
   const rows = useAppSelector(selectRows);
-  const pb = useAppSelector((state) => state.playback);
+  const playback = useAppSelector((state) => state.playback);
   const controller = useController();
   const [deleteQueued] = useDeleteQueuedMutation();
   const [retryClip] = useRetryClipMutation();
@@ -36,12 +36,12 @@ export function MessageList() {
   if (rows.length === 0) {
     return (
       <View style={styles.empty}>
-        <Text style={[type.meta, { color: colors.n700 }]}>No messages this shift yet</Text>
+        <Text style={[type.meta, { color: colors.neutral700 }]}>No messages this shift yet</Text>
       </View>
     );
   }
 
-  const nextId = pb.current?.playing ? pb.queue[0] : undefined;
+  const nextId = playback.current?.playing ? playback.queue[0] : undefined;
 
   return (
     <FlatList
@@ -66,10 +66,10 @@ export function MessageList() {
           row={item}
           now={now}
           play={{
-            current: pb.current?.msgId === item.id,
-            playing: pb.current?.msgId === item.id && pb.current.playing,
-            positionMs: pb.current?.msgId === item.id ? pb.current.positionMs : 0,
-            durationMs: pb.current?.msgId === item.id ? pb.current.durationMs : 0,
+            current: playback.current?.messageId === item.id,
+            playing: playback.current?.messageId === item.id && playback.current.playing,
+            positionMs: playback.current?.messageId === item.id ? playback.current.positionMs : 0,
+            durationMs: playback.current?.messageId === item.id ? playback.current.durationMs : 0,
             next: nextId === item.id,
           }}
           onPlay={onPlay}
@@ -84,6 +84,6 @@ export function MessageList() {
 const styles = StyleSheet.create({
   list: { flex: 1 },
   content: { flexGrow: 1, justifyContent: 'flex-end' },
-  section: { color: colors.n700, paddingHorizontal: 20, paddingBottom: 10 },
+  section: { color: colors.neutral700, paddingHorizontal: 20, paddingBottom: 10 },
   empty: { flex: 1, justifyContent: 'flex-end', paddingHorizontal: 20, paddingBottom: 16 },
 });

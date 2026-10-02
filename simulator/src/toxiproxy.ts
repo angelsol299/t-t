@@ -12,15 +12,15 @@ export interface Toxic {
 
 export function toxiproxy(api = process.env.TOXIPROXY_API ?? 'http://localhost:8474') {
   async function call(method: string, path: string, body?: unknown) {
-    const res = await fetch(`${api}${path}`, {
+    const response = await fetch(`${api}${path}`, {
       method,
       headers: body ? { 'content-type': 'application/json' } : undefined,
       body: body ? JSON.stringify(body) : undefined,
     });
-    if (!res.ok && res.status !== 404 && res.status !== 409) {
-      throw new Error(`toxiproxy ${method} ${path}: ${res.status} ${await res.text()}`);
+    if (!response.ok && response.status !== 404 && response.status !== 409) {
+      throw new Error(`toxiproxy ${method} ${path}: ${response.status} ${await response.text()}`);
     }
-    return res.status === 204 ? null : res.json().catch(() => null);
+    return response.status === 204 ? null : response.json().catch(() => null);
   }
 
   return {

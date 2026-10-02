@@ -2,7 +2,7 @@ import { AudioContext, AudioManager } from 'react-native-audio-api';
 import { SAMPLE_RATE } from '@shared/protocol';
 import { decodeToFloat, resample } from '@shared/mulaw';
 
-let ctx: AudioContext | null = null;
+let sharedContext: AudioContext | null = null;
 let sessionReady = false;
 
 /** Walkie audio plays through the loudspeaker and records from the mic at once. */
@@ -17,11 +17,11 @@ export function setupSession() {
 }
 
 export function audioContext(): AudioContext {
-  if (!ctx) {
+  if (!sharedContext) {
     setupSession();
-    ctx = new AudioContext();
+    sharedContext = new AudioContext();
   }
-  return ctx;
+  return sharedContext;
 }
 
 /**
@@ -31,8 +31,8 @@ export function audioContext(): AudioContext {
  */
 export function mulawBuffer(bytes: Uint8Array) {
   const context = audioContext();
-  const pcm = resample(decodeToFloat(bytes), SAMPLE_RATE, context.sampleRate);
-  const buf = context.createBuffer(1, Math.max(1, pcm.length), context.sampleRate);
-  buf.copyToChannel(pcm, 0);
-  return buf;
+  const samples = resample(decodeToFloat(bytes), SAMPLE_RATE, context.sampleRate);
+  const audioBuffer = context.createBuffer(1, Math.max(1, samples.length), context.sampleRate);
+  audioBuffer.copyToChannel(samples, 0);
+  return audioBuffer;
 }

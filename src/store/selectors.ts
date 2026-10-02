@@ -8,7 +8,7 @@ export type Receipt =
   | { kind: 'time' } // someone else's message: just the time
   | { kind: 'heard'; n: number } // mine, committed: "Heard by N"
   | { kind: 'queued' } // mine, on the phone, auto-retrying: "Not sent yet"
-  | { kind: 'sending'; pct: number | null } // mine, uploading: "Sending 60%" / "Sending…"
+  | { kind: 'sending'; percent: number | null } // mine, uploading: "Sending 60%" / "Sending…"
   | { kind: 'failed' }; // mine, needs a manual retry: "Not sent"
 
 export interface Row {
@@ -58,7 +58,7 @@ export const selectRows = createSelector(
       let receipt: Receipt;
       if (entry.status === 'failed') receipt = { kind: 'failed' };
       else if (net === 'offline' || !linkUp) receipt = { kind: 'queued' };
-      else receipt = { kind: 'sending', pct: net === 'weak' ? Math.round(entry.progress * 100) : null };
+      else receipt = { kind: 'sending', percent: net === 'weak' ? Math.round(entry.progress * 100) : null };
       rows.push({
         id: entry.clipId,
         mine: true,

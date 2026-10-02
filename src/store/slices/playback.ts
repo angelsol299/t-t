@@ -1,28 +1,28 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import { kv } from '@/services/db';
+import { keyValueStore } from '@/services/db';
 
 export interface PlaybackState {
-  current: { msgId: string; positionMs: number; durationMs: number; playing: boolean } | null;
+  current: { messageId: string; positionMs: number; durationMs: number; playing: boolean } | null;
   queue: string[]; // auto-play order, oldest first
   missed: string[]; // ids tagged MISSED until played to the end
 }
 
 const playback = createSlice({
   name: 'playback',
-  initialState: (): PlaybackState => ({ current: null, queue: [], missed: kv.get<string[]>('missed', []) }),
+  initialState: (): PlaybackState => ({ current: null, queue: [], missed: keyValueStore.get<string[]>('missed', []) }),
   reducers: {
     markMissed(state, action: PayloadAction<string[]>) {
       for (const id of action.payload) if (!state.missed.includes(id)) state.missed.push(id);
     },
     enqueue(state, action: PayloadAction<string[]>) {
-      for (const id of action.payload) if (!state.queue.includes(id) && state.current?.msgId !== id) state.queue.push(id);
+      for (const id of action.payload) if (!state.queue.includes(id) && state.current?.messageId !== id) state.queue.push(id);
     },
     clearQueue(state) {
       state.queue = [];
     },
-    started(state, action: PayloadAction<{ msgId: string; positionMs: number; durationMs: number }>) {
+    started(state, action: PayloadAction<{ messageId: string; positionMs: number; durationMs: number }>) {
       state.current = { ...action.payload, playing: true };
-      state.queue = state.queue.filter((id) => id !== action.payload.msgId);
+      state.queue = state.queue.filter((id) => id !== action.payload.messageId);
     },
     progress(state, action: PayloadAction<number>) {
       if (state.current) state.current.positionMs = action.payload;
@@ -33,7 +33,7 @@ const playback = createSlice({
     /** Played to the end: clears MISSED. Stopping halfway keeps it. */
     finished(state, action: PayloadAction<string>) {
       state.missed = state.missed.filter((id) => id !== action.payload);
-      if (state.current?.msgId === action.payload) state.current = null;
+      if (state.current?.messageId === action.payload) state.current = null;
     },
     stopped(state) {
       state.current = null;

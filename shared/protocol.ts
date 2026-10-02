@@ -30,24 +30,24 @@ export interface ChannelMessage {
   heardBy: number;
 }
 
-export type ClientMsg =
-  | { t: 'hello'; clientId: string; name: string; lastSeq: number }
-  | { t: 'floor_request'; clipId: string; recordedAt: number }
-  | { t: 'floor_release'; clipId: string; total: number; durationMs: number; recordedAt: number }
-  | { t: 'played'; msgId: string }
-  | { t: 'ping'; ts: number };
+export type ClientMessage =
+  | { type: 'hello'; clientId: string; name: string; lastSeq: number }
+  | { type: 'floor_request'; clipId: string; recordedAt: number }
+  | { type: 'floor_release'; clipId: string; total: number; durationMs: number; recordedAt: number }
+  | { type: 'played'; messageId: string }
+  | { type: 'ping'; sentAt: number };
 
-export type ServerMsg =
-  | { t: 'welcome'; online: number; floor: Speaker | null; serverTime: number; missed: ChannelMessage[] }
-  | { t: 'presence'; online: number }
-  | { t: 'floor_granted'; clipId: string }
-  | { t: 'floor_denied'; clipId: string; speaker: Speaker }
-  | { t: 'floor_taken'; speaker: Speaker }
-  | { t: 'floor_free'; clipId: string; reason: FloorFreeReason }
-  | { t: 'chunk_ack'; clipId: string; upTo: number }
-  | { t: 'message'; message: ChannelMessage }
-  | { t: 'receipt'; msgId: string; heardBy: number }
-  | { t: 'pong'; ts: number; serverTime: number };
+export type ServerMessage =
+  | { type: 'welcome'; online: number; floor: Speaker | null; serverTime: number; missed: ChannelMessage[] }
+  | { type: 'presence'; online: number }
+  | { type: 'floor_granted'; clipId: string }
+  | { type: 'floor_denied'; clipId: string; speaker: Speaker }
+  | { type: 'floor_taken'; speaker: Speaker }
+  | { type: 'floor_free'; clipId: string; reason: FloorFreeReason }
+  | { type: 'chunk_ack'; clipId: string; upTo: number }
+  | { type: 'message'; message: ChannelMessage }
+  | { type: 'receipt'; messageId: string; heardBy: number }
+  | { type: 'pong'; sentAt: number; serverTime: number };
 
 // HTTP API (resumable upload + history)
 //   GET  /messages?since=<seq>              -> { messages: ChannelMessage[] }
@@ -70,26 +70,26 @@ export interface ClipComplete {
 // [41..]   µ-law payload
 
 export const FRAME_AUDIO = 1;
-const ID_LEN = 36;
-const HEADER = 1 + ID_LEN + 4;
+const CLIP_ID_LENGTH = 36;
+const FRAME_HEADER_LENGTH = 1 + CLIP_ID_LENGTH + 4;
 
 export function encodeChunkFrame(clipId: string, seq: number, payload: Uint8Array): Uint8Array {
-  const out = new Uint8Array(HEADER + payload.length);
-  out[0] = FRAME_AUDIO;
-  for (let index = 0; index < ID_LEN; index++) out[1 + index] = clipId.charCodeAt(index);
-  new DataView(out.buffer).setUint32(1 + ID_LEN, seq, false);
-  out.set(payload, HEADER);
-  return out;
+  const output = new Uint8Array(FRAME_HEADER_LENGTH + payload.length);
+  output[0] = FRAME_AUDIO;
+  for (let index = 0; index < CLIP_ID_LENGTH; index++) output[1 + index] = clipId.charCodeAt(index);
+  new DataView(output.buffer).setUint32(1 + CLIP_ID_LENGTH, seq, false);
+  output.set(payload, FRAME_HEADER_LENGTH);
+  return output;
 }
 
 export function decodeChunkFrame(
   data: Uint8Array,
 ): { clipId: string; seq: number; payload: Uint8Array } | null {
-  if (data.length < HEADER || data[0] !== FRAME_AUDIO) return null;
+  if (data.length < FRAME_HEADER_LENGTH || data[0] !== FRAME_AUDIO) return null;
   let clipId = '';
-  for (let index = 0; index < ID_LEN; index++) clipId += String.fromCharCode(data[1 + index]);
-  const seq = new DataView(data.buffer, data.byteOffset, data.byteLength).getUint32(1 + ID_LEN, false);
-  return { clipId, seq, payload: data.subarray(HEADER) };
+  for (let index = 0; index < CLIP_ID_LENGTH; index++) clipId += String.fromCharCode(data[1 + index]);
+  const seq = new DataView(data.buffer, data.byteOffset, data.byteLength).getUint32(1 + CLIP_ID_LENGTH, false);
+  return { clipId, seq, payload: data.subarray(FRAME_HEADER_LENGTH) };
 }
 
 export function isLate(message: Pick<ChannelMessage, 'recordedAt' | 'committedAt'>): boolean {

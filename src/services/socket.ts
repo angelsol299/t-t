@@ -1,5 +1,5 @@
 import { WS_URL } from '@/config';
-import type { ClientMsg, ServerMsg } from '@shared/protocol';
+import type { ClientMessage, ServerMessage } from '@shared/protocol';
 
 // One long-lived WebSocket with heartbeat and backoff reconnects.
 //
@@ -13,18 +13,18 @@ const MAX_MISSED = 3;
 const BACKOFF = [1000, 2000, 4000, 8000, 15000];
 
 export interface SocketHandlers {
-  hello(): Extract<ClientMsg, { t: 'hello' }>;
-  onMessage(msg: ServerMsg): void;
+  hello(): Extract<ClientMessage, { type: 'hello' }>;
+  onMessage(message: ServerMessage): void;
   onBinary(data: Uint8Array): void;
   onLinkUp(): void;
   onLinkDown(): void;
-  onPong(rtt: number, serverTime: number): void;
+  onPong(roundTripMs: number, serverTime: number): void;
   onPingMissed(): void;
   onRetryScheduled(at: number | null): void;
 }
 
 export function createSocket(handlers: SocketHandlers) {
-  let ws: WebSocket | null = null;
+  let socket: WebSocket | null = null;
   let up = false;
   let attempt = 0;
   let retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -59,12 +59,12 @@ export function createSocket(handlers: SocketHandlers) {
 
   function teardown() {
     clearTimers();
-    if (ws) {
-      const old = ws;
-      ws = null;
-      old.onopen = old.onclose = old.onerror = old.onmessage = null;
+    if (socket) {
+      const previousSocket = socket;
+      socket = null;
+      previousSocket.onopen = previousSocket.onclose = previousSocket.onerror = previousSocket.onmessage = null;
       try {
-        old.close();
+        previousSocket.close();
       } catch {}
     }
     awaitingPong = null;
@@ -81,58 +81,58 @@ export function createSocket(handlers: SocketHandlers) {
     teardown();
     if (stopped) return;
     handlers.onRetryScheduled(null);
-    const sock = new WebSocket(WS_URL);
-    sock.binaryType = 'arraybuffer';
-    ws = sock;
+    const newSocket = new WebSocket(WS_URL);
+    newSocket.binaryType = 'arraybuffer';
+    socket = newSocket;
 
-    sock.onopen = () => {
-      if (ws !== sock) return;
-      sock.send(JSON.stringify(handlers.hello()));
+    newSocket.onopen = () => {
+      if (socket !== newSocket) return;
+      newSocket.send(JSON.stringify(handlers.hello()));
       pingTimer = setInterval(() => {
-        if (ws !== sock) return;
+        if (socket !== newSocket) return;
         if (awaitingPong !== null) {
           missed++;
           handlers.onPingMissed();
           if (missed >= MAX_MISSED) return onDead();
         }
         awaitingPong = Date.now();
-        sock.send(JSON.stringify({ t: 'ping', ts: awaitingPong } satisfies ClientMsg));
+        newSocket.send(JSON.stringify({ type: 'ping', sentAt: awaitingPong } satisfies ClientMessage));
       }, PING_MS);
     };
 
-    sock.onmessage = (ev) => {
-      if (ws !== sock) return;
-      if (typeof ev.data !== 'string') {
-        handlers.onBinary(new Uint8Array(ev.data as ArrayBuffer));
+    newSocket.onmessage = (event) => {
+      if (socket !== newSocket) return;
+      if (typeof event.data !== 'string') {
+        handlers.onBinary(new Uint8Array(event.data as ArrayBuffer));
         return;
       }
-      let msg: ServerMsg;
+      let message: ServerMessage;
       try {
-        msg = JSON.parse(ev.data);
+        message = JSON.parse(event.data);
       } catch {
         return;
       }
-      if (msg.t === 'pong') {
-        if (awaitingPong === msg.ts) {
+      if (message.type === 'pong') {
+        if (awaitingPong === message.sentAt) {
           awaitingPong = null;
           missed = 0;
         }
-        handlers.onPong(Date.now() - msg.ts, msg.serverTime + (Date.now() - msg.ts) / 2);
+        handlers.onPong(Date.now() - message.sentAt, message.serverTime + (Date.now() - message.sentAt) / 2);
         return;
       }
-      if (msg.t === 'welcome') {
+      if (message.type === 'welcome') {
         attempt = 0;
         up = true;
         handlers.onLinkUp();
       }
-      handlers.onMessage(msg);
+      handlers.onMessage(message);
     };
 
-    sock.onerror = () => {
-      if (ws === sock) onDead();
+    newSocket.onerror = () => {
+      if (socket === newSocket) onDead();
     };
-    sock.onclose = () => {
-      if (ws === sock) onDead();
+    newSocket.onclose = () => {
+      if (socket === newSocket) onDead();
     };
   }
 
@@ -154,24 +154,24 @@ export function createSocket(handlers: SocketHandlers) {
     },
     /** The OS reports no network: don't wait for timeouts to notice. */
     dropNow() {
-      if (ws) onDead();
+      if (socket) onDead();
     },
     get isUp() {
       return up;
     },
-    send(msg: ClientMsg): boolean {
-      if (!up || !ws || ws.readyState !== WebSocket.OPEN) return false;
-      ws.send(JSON.stringify(msg));
+    send(message: ClientMessage): boolean {
+      if (!up || !socket || socket.readyState !== WebSocket.OPEN) return false;
+      socket.send(JSON.stringify(message));
       return true;
     },
     sendBinary(data: Uint8Array): boolean {
-      if (!up || !ws || ws.readyState !== WebSocket.OPEN) return false;
-      ws.send(data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer);
+      if (!up || !socket || socket.readyState !== WebSocket.OPEN) return false;
+      socket.send(data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer);
       return true;
     },
     /** Bytes queued in the socket but not yet on the wire: the backlog signal for "weak". */
     get bufferedAmount() {
-      return ws?.bufferedAmount ?? 0;
+      return socket?.bufferedAmount ?? 0;
     },
   };
 }

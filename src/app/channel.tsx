@@ -18,18 +18,18 @@ import { colors } from '@/theme/tokens';
 export default function Channel() {
   useGetMessagesQuery();
   const controller = useController();
-  const conn = useAppSelector((state) => state.connection);
+  const connection = useAppSelector((state) => state.connection);
   const floor = useAppSelector((state) => state.floor);
   const offset = useAppSelector((state) => state.session.serverOffset);
   const saved = useAppSelector(selectSavedCount);
 
-  const offline = conn.net === 'offline';
-  const listeners = Math.max(0, conn.online - 1);
+  const offline = connection.net === 'offline';
+  const listeners = Math.max(0, connection.online - 1);
 
-  let sub = conn.everConnected ? `${conn.online} online` : 'Connecting…';
-  if (floor.my?.mode === 'live') sub = `Live to ${listeners}`;
-  if (offline) sub = `${conn.onlineAtDrop ?? conn.online} online when you lost signal`;
-  if (floor.notice) sub = floor.notice;
+  let subtitle = connection.everConnected ? `${connection.online} online` : 'Connecting…';
+  if (floor.my?.mode === 'live') subtitle = `Live to ${listeners}`;
+  if (offline) subtitle = `${connection.onlineAtDrop ?? connection.online} online when you lost signal`;
+  if (floor.notice) subtitle = floor.notice;
 
   let ptt: PttState;
   if (floor.micDenied) ptt = { kind: 'micOff' };
@@ -49,19 +49,19 @@ export default function Channel() {
 
   return (
     <SafeAreaView style={styles.root} edges={['top', 'bottom', 'left', 'right']}>
-      <TopBar net={conn.everConnected || offline ? conn.net : undefined} onLongPressBrand={() => router.push('/join?edit=1')} />
-      <ChannelHeader name={CHANNEL_NAME} sub={sub} />
-      {conn.net === 'weak' && <WeakBand />}
-      {offline && conn.offlineSince !== null && (
+      <TopBar net={connection.everConnected || offline ? connection.net : undefined} onLongPressBrand={() => router.push('/join?edit=1')} />
+      <ChannelHeader name={CHANNEL_NAME} sub={subtitle} />
+      {connection.net === 'weak' && <WeakBand />}
+      {offline && connection.offlineSince !== null && (
         <OfflineBand
-          since={conn.offlineSince}
+          since={connection.offlineSince}
           saved={saved}
-          nextRetryAt={conn.nextRetryAt}
+          nextRetryAt={connection.nextRetryAt}
           onRetry={() => controller.retryNow()}
         />
       )}
-      {conn.net === 'recovering' && (
-        <BackOnlineBand missed={conn.missedOnReturn ?? 0} onReplay={() => controller.replayAll()} />
+      {connection.net === 'recovering' && (
+        <BackOnlineBand missed={connection.missedOnReturn ?? 0} onReplay={() => controller.replayAll()} />
       )}
       <MessageList />
       {floor.denied && floor.holding && <FloorDeniedCard name={floor.denied.name} />}

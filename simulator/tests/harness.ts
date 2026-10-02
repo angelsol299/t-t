@@ -11,21 +11,21 @@ import { toxiproxy } from '../src/toxiproxy.ts';
 
 const SERVER_PORT = 13_000;
 const TP_PORT = 18_474;
-export const TP = toxiproxy(`http://localhost:${TP_PORT}`);
-export const DIRECT = `http://localhost:${SERVER_PORT}`;
+export const TOXIPROXY = toxiproxy(`http://localhost:${TP_PORT}`);
+export const SERVER_DIRECT_URL = `http://localhost:${SERVER_PORT}`;
 
 let server: ReturnType<typeof createServer> | null = null;
-let tpProc: ChildProcess | null = null;
+let toxiproxyProcess: ChildProcess | null = null;
 let dataDir = '';
 const bots: Bot[] = [];
 let nextPort = 14_001;
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export async function until(cond: () => boolean, ms = 10_000, what = 'condition') {
+export async function until(condition: () => boolean, ms = 10_000, description = 'condition') {
   const end = Date.now() + ms;
-  while (!cond()) {
-    if (Date.now() > end) throw new Error(`timed out waiting for ${what}`);
+  while (!condition()) {
+    if (Date.now() > end) throw new Error(`timed out waiting for ${description}`);
     await sleep(25);
   }
 }
@@ -34,12 +34,12 @@ export async function start() {
   dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'teton-test-'));
   server = createServer({ port: SERVER_PORT, dataDir, quiet: true });
   await server.ready;
-  if (!(await TP.ping())) {
+  if (!(await TOXIPROXY.ping())) {
     let spawnError: Error | null = null;
-    tpProc = spawn('toxiproxy-server', ['-port', String(TP_PORT)], { stdio: 'ignore' });
-    tpProc.on('error', (err) => (spawnError = err));
+    toxiproxyProcess = spawn('toxiproxy-server', ['-port', String(TP_PORT)], { stdio: 'ignore' });
+    toxiproxyProcess.on('error', (error) => (spawnError = error));
     const end = Date.now() + 5000;
-    while (!(await TP.ping())) {
+    while (!(await TOXIPROXY.ping())) {
       if (spawnError) throw new Error('toxiproxy-server not found: brew install toxiproxy (see README)');
       if (Date.now() > end) throw new Error('toxiproxy-server did not start');
       await sleep(100);
@@ -51,7 +51,7 @@ export async function stop() {
   for (const bot of bots) bot.close();
   bots.length = 0;
   await server?.close();
-  tpProc?.kill();
+  toxiproxyProcess?.kill();
   fs.rmSync(dataDir, { recursive: true, force: true });
 }
 
@@ -59,7 +59,7 @@ export async function stop() {
 export async function bot(name: string): Promise<{ bot: Bot; link: string }> {
   const port = nextPort++;
   const link = `link_${port}`;
-  await TP.proxy(link, `127.0.0.1:${port}`, `127.0.0.1:${SERVER_PORT}`);
+  await TOXIPROXY.proxy(link, `127.0.0.1:${port}`, `127.0.0.1:${SERVER_PORT}`);
   const bot = new Bot({ name, server: `http://127.0.0.1:${port}` });
   bots.push(bot);
   await bot.connect();
@@ -67,11 +67,11 @@ export async function bot(name: string): Promise<{ bot: Bot; link: string }> {
 }
 
 export async function serverMessages() {
-  const res = await fetch(`${DIRECT}/messages?since=0`);
-  return ((await res.json()) as { messages: { id: string; durationMs: number }[] }).messages;
+  const response = await fetch(`${SERVER_DIRECT_URL}/messages?since=0`);
+  return ((await response.json()) as { messages: { id: string; durationMs: number }[] }).messages;
 }
 
 export async function clipState(id: string) {
-  const res = await fetch(`${DIRECT}/clips/${id}`);
-  return (await res.json()) as { received: number[]; committed: boolean };
+  const response = await fetch(`${SERVER_DIRECT_URL}/clips/${id}`);
+  return (await response.json()) as { received: number[]; committed: boolean };
 }

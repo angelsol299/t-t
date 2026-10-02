@@ -15,7 +15,7 @@ export function Splash() {
         </View>
       </View>
       <View style={styles.footer}>
-        <Text style={[type.caps, { color: colors.n400 }]}>By Teton</Text>
+        <Text style={[type.caps, { color: colors.neutral400 }]}>By Teton</Text>
       </View>
     </SafeAreaView>
   );
@@ -25,10 +25,10 @@ const styles = StyleSheet.create({
   root: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: colors.ink },
   center: { flex: 1, justifyContent: 'center', gap: 28, paddingHorizontal: 28 },
   words: { gap: 10 },
-  tagline: { ...type.body, color: colors.n400 },
+  tagline: { ...type.body, color: colors.neutral400 },
   footer: {
     borderTopWidth: 2,
-    borderTopColor: colors.n700,
+    borderTopColor: colors.neutral700,
     marginHorizontal: 28,
     paddingTop: 18,
     paddingBottom: 28,

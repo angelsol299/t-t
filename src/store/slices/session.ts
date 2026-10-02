@@ -1,6 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { randomUUID } from 'expo-crypto';
-import { kv } from '@/services/db';
+import { keyValueStore } from '@/services/db';
 
 export interface SessionState {
   name: string | null;
@@ -10,16 +10,16 @@ export interface SessionState {
 }
 
 function load(): SessionState {
-  let clientId = kv.get<string | null>('clientId', null);
+  let clientId = keyValueStore.get<string | null>('clientId', null);
   if (!clientId) {
     clientId = randomUUID();
-    kv.set('clientId', clientId);
+    keyValueStore.set('clientId', clientId);
   }
   return {
-    name: kv.get<string | null>('name', null),
+    name: keyValueStore.get<string | null>('name', null),
     clientId,
-    lastSeq: kv.get<number>('lastSeq', 0),
-    serverOffset: kv.get<number>('serverOffset', 0),
+    lastSeq: keyValueStore.get<number>('lastSeq', 0),
+    serverOffset: keyValueStore.get<number>('serverOffset', 0),
   };
 }
 

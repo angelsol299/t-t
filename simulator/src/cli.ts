@@ -9,10 +9,10 @@ const UPSTREAM = process.env.UPSTREAM ?? 'localhost:3000';
 export const PROXIES = { app: { listen: '0.0.0.0:4000' }, bots: { listen: '0.0.0.0:4001' } } as const;
 
 const args = process.argv.slice(2);
-const cmd = args[0];
+const command = args[0];
 const targetArg = args.includes('--target') ? args[args.indexOf('--target') + 1] : 'app';
 const proxies = targetArg === 'all' ? Object.keys(PROXIES) : [targetArg];
-const tp = toxiproxy();
+const toxiproxyClient = toxiproxy();
 const log = (text: string) => console.log(`${new Date().toLocaleTimeString('en-GB')}  ${text}`);
 
 function help() {
@@ -23,50 +23,50 @@ function help() {
 }
 
 async function main() {
-  if (!cmd || cmd === 'help' || cmd === '--help') return help();
-  if (!(await tp.ping())) {
+  if (!command || command === 'help' || command === '--help') return help();
+  if (!(await toxiproxyClient.ping())) {
     console.error('Toxiproxy is not running. Start it with `toxiproxy-server` (brew) or `docker compose up -d`.');
     process.exit(1);
   }
-  if (cmd === 'setup') {
+  if (command === 'setup') {
     for (const [name, proxy] of Object.entries(PROXIES)) {
-      await tp.proxy(name, proxy.listen, UPSTREAM);
+      await toxiproxyClient.proxy(name, proxy.listen, UPSTREAM);
       log(`proxy ${name}: ${proxy.listen} → ${UPSTREAM}`);
     }
     return;
   }
-  if (cmd === 'status') {
-    for (const [name, proxy] of Object.entries(await tp.list())) {
+  if (command === 'status') {
+    for (const [name, proxy] of Object.entries(await toxiproxyClient.list())) {
       const toxics = proxy.toxics.map((toxic) => `${toxic.type}(${toxic.stream})`).join(', ') || 'none';
       console.log(`${name.padEnd(5)} ${proxy.listen} → ${proxy.upstream}  ${proxy.enabled ? 'enabled ' : 'DISABLED'}  toxics: ${toxics}`);
     }
     return;
   }
-  const scenario = scenarios[cmd];
+  const scenario = scenarios[command];
   if (!scenario) {
     help();
     process.exit(1);
   }
-  const existing = await tp.list();
+  const existing = await toxiproxyClient.list();
   for (const proxy of proxies) {
     if (!existing[proxy]) {
       console.error(`No proxy "${proxy}". Run \`npm run sim -- setup\` first.`);
       process.exit(1);
     }
-    await tp.reset(proxy);
+    await toxiproxyClient.reset(proxy);
   }
-  log(`${cmd} on ${proxies.join(', ')} — ${scenario.about}`);
-  const ctl = new AbortController();
+  log(`${command} on ${proxies.join(', ')} — ${scenario.about}`);
+  const abortController = new AbortController();
   process.on('SIGINT', async () => {
-    ctl.abort();
-    for (const proxy of proxies) await tp.reset(proxy);
+    abortController.abort();
+    for (const proxy of proxies) await toxiproxyClient.reset(proxy);
     log('restored a clean link');
     process.exit(0);
   });
-  await scenario.run({ tp, proxies, signal: ctl.signal, log });
+  await scenario.run({ toxiproxyClient, proxies, signal: abortController.signal, log });
 }
 
-main().catch((err) => {
-  console.error(err);
+main().catch((error) => {
+  console.error(error);
   process.exit(1);
 });

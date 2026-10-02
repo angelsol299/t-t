@@ -52,7 +52,7 @@ export function openDb(dataDir: string) {
     );
   `);
 
-  const insertMsg = db.prepare(
+  const insertMessage = db.prepare(
     `INSERT OR IGNORE INTO messages (id, sender_id, sender_name, duration_ms, recorded_at, committed_at)
      VALUES (?, ?, ?, ?, ?, ?)`,
   );
@@ -65,15 +65,15 @@ export function openDb(dataDir: string) {
   );
   const heardBy = db.prepare(`SELECT COUNT(*) AS n FROM receipts WHERE msg_id = ?`);
   const expired = db.prepare(`SELECT id FROM messages WHERE committed_at < ?`);
-  const deleteMsg = db.prepare(`DELETE FROM messages WHERE id = ?`);
+  const deleteMessage = db.prepare(`DELETE FROM messages WHERE id = ?`);
   const deleteReceipts = db.prepare(`DELETE FROM receipts WHERE msg_id = ?`);
 
   return {
     /** Inserts once; a second commit of the same clip id returns the existing row. */
     commit(message: Omit<ChannelMessage, 'seq' | 'heardBy'>): { message: ChannelMessage; created: boolean } {
-      const res = insertMsg.run(message.id, message.senderId, message.senderName, message.durationMs, message.recordedAt, message.committedAt);
+      const response = insertMessage.run(message.id, message.senderId, message.senderName, message.durationMs, message.recordedAt, message.committedAt);
       const row = byId.get(message.id) as unknown as MessageRow;
-      return { message: toMessage(row), created: res.changes > 0 };
+      return { message: toMessage(row), created: response.changes > 0 };
     },
     get(id: string): ChannelMessage | null {
       const row = byId.get(id) as unknown as MessageRow | undefined;
@@ -86,17 +86,17 @@ export function openDb(dataDir: string) {
       return (recent.all(sinceMs, limit) as unknown as MessageRow[]).map(toMessage);
     },
     /** Returns the new heard-by count, or null if nothing changed. */
-    markHeard(msgId: string, clientId: string): number | null {
-      const res = insertReceipt.run(clientId, msgId, clientId);
-      if (res.changes === 0) return null;
-      return (heardBy.get(msgId) as { n: number }).n;
+    markHeard(messageId: string, clientId: string): number | null {
+      const response = insertReceipt.run(clientId, messageId, clientId);
+      if (response.changes === 0) return null;
+      return (heardBy.get(messageId) as { n: number }).n;
     },
     expiredIds(beforeMs: number): string[] {
       return (expired.all(beforeMs) as { id: string }[]).map((row) => row.id);
     },
     delete(id: string) {
       deleteReceipts.run(id);
-      deleteMsg.run(id);
+      deleteMessage.run(id);
     },
     close() {
       db.close();

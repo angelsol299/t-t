@@ -13,8 +13,8 @@ export type Net = 'online' | 'weak' | 'offline' | 'recovering';
 
 export const ABSORB_MS = 3000;
 export const RECOVERING_MS = 5000;
-export const WEAK_RTT_MS = 800;
-export const GOOD_RTT_MS = 500;
+export const WEAK_ROUND_TRIP_MS = 800;
+export const GOOD_ROUND_TRIP_MS = 500;
 export const WEAK_BACKLOG_MS = 1500;
 export const GOOD_BACKLOG_MS = 500;
 export const WEAK_MISSED_PONGS = 2;
@@ -26,7 +26,7 @@ export interface NetState {
   downSince: number | null;
   offlineSince: number | null;
   recoveringUntil: number | null;
-  rtt: number | null;
+  roundTripMs: number | null;
   missedPongs: number;
   backlogMs: number;
   poorQuality: boolean;
@@ -35,7 +35,7 @@ export interface NetState {
 export type NetEvent =
   | { type: 'link_up'; at: number }
   | { type: 'link_down'; at: number }
-  | { type: 'pong'; at: number; rtt: number }
+  | { type: 'pong'; at: number; roundTripMs: number }
   | { type: 'ping_missed'; at: number }
   | { type: 'backlog'; at: number; ms: number }
   | { type: 'tick'; at: number };
@@ -50,7 +50,7 @@ export function initialNetState(at: number): NetState {
     downSince: at,
     offlineSince: null,
     recoveringUntil: null,
-    rtt: null,
+    roundTripMs: null,
     missedPongs: 0,
     backlogMs: 0,
     poorQuality: false,
@@ -59,11 +59,11 @@ export function initialNetState(at: number): NetState {
 
 function nextQuality(state: NetState): boolean {
   const bad =
-    (state.rtt !== null && state.rtt > WEAK_RTT_MS) ||
+    (state.roundTripMs !== null && state.roundTripMs > WEAK_ROUND_TRIP_MS) ||
     state.missedPongs >= WEAK_MISSED_PONGS ||
     state.backlogMs > WEAK_BACKLOG_MS;
   const good =
-    (state.rtt === null || state.rtt < GOOD_RTT_MS) && state.missedPongs === 0 && state.backlogMs < GOOD_BACKLOG_MS;
+    (state.roundTripMs === null || state.roundTripMs < GOOD_ROUND_TRIP_MS) && state.missedPongs === 0 && state.backlogMs < GOOD_BACKLOG_MS;
   if (bad) return true;
   if (good) return false;
   return state.poorQuality; // in the hysteresis band: keep what we had
@@ -84,10 +84,10 @@ export function netReducer(state: NetState, event: NetEvent): NetState {
     }
     case 'link_down': {
       if (!state.linkUp) return state;
-      return { ...state, linkUp: false, downSince: event.at, rtt: null };
+      return { ...state, linkUp: false, downSince: event.at, roundTripMs: null };
     }
     case 'pong': {
-      const next = { ...state, rtt: event.rtt, missedPongs: 0 };
+      const next = { ...state, roundTripMs: event.roundTripMs, missedPongs: 0 };
       next.poorQuality = nextQuality(next);
       return withSettled(next);
     }

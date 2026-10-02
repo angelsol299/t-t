@@ -29,26 +29,26 @@ for (let byte = 0; byte < 256; byte++) DECODE_TABLE[byte] = decodeSample(byte);
 
 /** Float samples in [-1, 1] → µ-law bytes. */
 export function encodeFloat(samples: Float32Array): Uint8Array {
-  const out = new Uint8Array(samples.length);
+  const output = new Uint8Array(samples.length);
   for (let index = 0; index < samples.length; index++) {
     const sample = Math.max(-1, Math.min(1, samples[index]));
-    out[index] = encodeSample(Math.round(sample * 32767));
+    output[index] = encodeSample(Math.round(sample * 32767));
   }
-  return out;
+  return output;
 }
 
 /** µ-law bytes → float samples in [-1, 1]. */
 export function decodeToFloat(bytes: Uint8Array): Float32Array<ArrayBuffer> {
-  const out = new Float32Array(bytes.length);
-  for (let index = 0; index < bytes.length; index++) out[index] = DECODE_TABLE[bytes[index]] / 32768;
-  return out;
+  const output = new Float32Array(bytes.length);
+  for (let index = 0; index < bytes.length; index++) output[index] = DECODE_TABLE[bytes[index]] / 32768;
+  return output;
 }
 
 /** µ-law bytes → 16-bit PCM. */
 export function decodeToInt16(bytes: Uint8Array): Int16Array {
-  const out = new Int16Array(bytes.length);
-  for (let index = 0; index < bytes.length; index++) out[index] = DECODE_TABLE[bytes[index]];
-  return out;
+  const output = new Int16Array(bytes.length);
+  for (let index = 0; index < bytes.length; index++) output[index] = DECODE_TABLE[bytes[index]];
+  return output;
 }
 
 /**
@@ -59,31 +59,31 @@ export function decodeToInt16(bytes: Uint8Array): Int16Array {
 export function resample(input: Float32Array, fromRate: number, toRate: number): Float32Array<ArrayBuffer> {
   if (fromRate === toRate) return new Float32Array(input);
   const ratio = fromRate / toRate;
-  const outLen = Math.floor(input.length / ratio);
-  const out = new Float32Array(outLen);
+  const outputLength = Math.floor(input.length / ratio);
+  const output = new Float32Array(outputLength);
   if (ratio > 1) {
-    for (let index = 0; index < outLen; index++) {
+    for (let index = 0; index < outputLength; index++) {
       const start = Math.floor(index * ratio);
       const end = Math.min(input.length, Math.floor((index + 1) * ratio));
       let sum = 0;
       for (let sourceIndex = start; sourceIndex < end; sourceIndex++) sum += input[sourceIndex];
-      out[index] = end > start ? sum / (end - start) : 0;
+      output[index] = end > start ? sum / (end - start) : 0;
     }
   } else {
-    for (let index = 0; index < outLen; index++) {
-      const pos = index * ratio;
-      const sourceIndex = Math.floor(pos);
-      const frac = pos - sourceIndex;
+    for (let index = 0; index < outputLength; index++) {
+      const sourcePosition = index * ratio;
+      const sourceIndex = Math.floor(sourcePosition);
+      const fraction = sourcePosition - sourceIndex;
       const before = input[sourceIndex] ?? 0;
       const after = input[sourceIndex + 1] ?? before;
-      out[index] = before + (after - before) * frac;
+      output[index] = before + (after - before) * fraction;
     }
   }
-  return out;
+  return output;
 }
 
 /** Root-mean-square level in [0, 1], used for the level meter. */
-export function rms(samples: Float32Array): number {
+export function rootMeanSquare(samples: Float32Array): number {
   if (samples.length === 0) return 0;
   let sum = 0;
   for (let index = 0; index < samples.length; index++) sum += samples[index] * samples[index];
@@ -91,7 +91,7 @@ export function rms(samples: Float32Array): number {
 }
 
 /** Level meter value from a µ-law chunk. */
-export function rmsMulaw(bytes: Uint8Array): number {
+export function mulawRootMeanSquare(bytes: Uint8Array): number {
   if (bytes.length === 0) return 0;
   let sum = 0;
   for (let index = 0; index < bytes.length; index++) {

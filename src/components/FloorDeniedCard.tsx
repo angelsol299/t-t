@@ -9,7 +9,7 @@ export function FloorDeniedCard({ name }: { name: string }) {
       <Clock size={20} color={colors.ink} strokeWidth={2} />
       <View style={styles.text}>
         <Text style={[type.rowStrong, { color: colors.ink }]}>{name} got there first</Text>
-        <Text style={[type.row, { color: colors.n700 }]}>Keep holding and you go live the moment they stop.</Text>
+        <Text style={[type.row, { color: colors.neutral700 }]}>Keep holding and you go live the moment they stop.</Text>
       </View>
     </View>
   );
@@ -27,7 +27,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.card,
     backgroundColor: colors.white,
     borderWidth: 1.5,
-    borderColor: colors.n300,
+    borderColor: colors.neutral300,
   },
   text: { flex: 1, gap: 2 },
 });

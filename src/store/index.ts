@@ -1,6 +1,6 @@
 import { configureStore, createListenerMiddleware, isAnyOf } from '@reduxjs/toolkit';
 import { useDispatch, useSelector } from 'react-redux';
-import { kv } from '@/services/db';
+import { keyValueStore } from '@/services/db';
 import { channelApi } from './api/channelApi';
 import connection from './slices/connection';
 import floor from './slices/floor';
@@ -19,8 +19,8 @@ export const store = configureStore({
     outbox,
     [channelApi.reducerPath]: channelApi.reducer,
   },
-  middleware: (gDM) =>
-    gDM({ serializableCheck: false, immutableCheck: false }).prepend(listener.middleware).concat(channelApi.middleware),
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({ serializableCheck: false, immutableCheck: false }).prepend(listener.middleware).concat(channelApi.middleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;
@@ -33,13 +33,13 @@ listener.startListening({
   matcher: isAnyOf(setName, advanceSeq, setServerOffset),
   effect: (_, api) => {
     const session = (api.getState() as RootState).session;
-    kv.set('name', session.name);
-    kv.set('lastSeq', session.lastSeq);
-    kv.set('serverOffset', session.serverOffset);
+    keyValueStore.set('name', session.name);
+    keyValueStore.set('lastSeq', session.lastSeq);
+    keyValueStore.set('serverOffset', session.serverOffset);
   },
 });
 
 listener.startListening({
   matcher: isAnyOf(markMissed, finished),
-  effect: (_, api) => kv.set('missed', (api.getState() as RootState).playback.missed),
+  effect: (_, api) => keyValueStore.set('missed', (api.getState() as RootState).playback.missed),
 });

@@ -3,8 +3,8 @@ export function duration(ms: number): string {
   return `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, '0')}`;
 }
 
-export function clock(ts: number): string {
-  const date = new Date(ts);
+export function clock(timestamp: number): string {
+  const date = new Date(timestamp);
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 }
 

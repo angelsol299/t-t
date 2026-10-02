@@ -10,7 +10,7 @@ import { toxiproxy } from './toxiproxy.ts';
 //   SERVER=http://localhost:3000 npm run bots   (bypass Toxiproxy)
 
 const SERVER = process.env.SERVER ?? 'http://localhost:4001';
-const here = path.dirname(fileURLToPath(import.meta.url));
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const NAMES = ['Anna', 'Jonas', 'Maria'];
 
 const time = () => new Date().toLocaleTimeString('en-GB');
@@ -19,7 +19,7 @@ const log = (text: string) => {
 };
 
 function sample(name: string): Uint8Array | undefined {
-  const file = path.join(here, '..', 'samples', `${name.toLowerCase()}.ul`);
+  const file = path.join(scriptDir, '..', 'samples', `${name.toLowerCase()}.ul`);
   return fs.existsSync(file) ? new Uint8Array(fs.readFileSync(file)) : undefined;
 }
 
@@ -36,14 +36,14 @@ for (const name of NAMES) {
 }
 
 let auto: NodeJS.Timeout | null = null;
-const tp = toxiproxy();
+const toxiproxyClient = toxiproxy();
 
 async function race() {
   const anna = bots.get('anna')!;
   // Delay what the phone receives so it cannot see Anna take the floor: if you
   // press at GO, your floor_request reaches the server after hers and you lose
   // a genuine race (screen 08).
-  await tp.addToxic('app', { name: 'race', type: 'latency', stream: 'downstream', attributes: { latency: 1500 } }).catch(() => {
+  await toxiproxyClient.addToxic('app', { name: 'race', type: 'latency', stream: 'downstream', attributes: { latency: 1500 } }).catch(() => {
     log('(no Toxiproxy: race still runs, but you need to press within your round-trip time)');
   });
   for (const count of ['3', '2', '1']) {
@@ -52,7 +52,7 @@ async function race() {
   }
   log('GO — press now and keep holding');
   await anna.talk(4000);
-  await tp.removeToxic('app', 'race').catch(() => {});
+  await toxiproxyClient.removeToxic('app', 'race').catch(() => {});
 }
 
 const HELP = `
@@ -111,15 +111,15 @@ async function main() {
   console.log(`Bots connecting to ${SERVER}…`);
   await Promise.all([...bots.values()].map((bot) => bot.connect()));
   console.log(`Connected: ${NAMES.join(', ')}. Type "help".`);
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout, prompt: '> ' });
-  rl.prompt();
-  rl.on('line', async (line) => {
+  const readlineInterface = readline.createInterface({ input: process.stdin, output: process.stdout, prompt: '> ' });
+  readlineInterface.prompt();
+  readlineInterface.on('line', async (line) => {
     try {
       await handle(line);
-    } catch (err) {
-      log(String(err));
+    } catch (error) {
+      log(String(error));
     }
-    rl.prompt();
+    readlineInterface.prompt();
   });
 }
 

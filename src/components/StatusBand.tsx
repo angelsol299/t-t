@@ -2,7 +2,7 @@ import { Phone, RotateCcw, RotateCw } from 'lucide-react-native';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { RECEPTION_PHONE } from '@/config';
 import { useNow } from '@/hooks/useNow';
-import { colors, fonts, HIT, radii, type } from '@/theme/tokens';
+import { colors, fonts, MIN_TOUCH_TARGET, radii, type } from '@/theme/tokens';
 import { duration } from '@/utils/format';
 
 export function WeakBand() {
@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.card,
   },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 0, minHeight: 44 },
-  ghost: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: HIT, paddingHorizontal: 4 },
+  ghost: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: MIN_TOUCH_TARGET, paddingHorizontal: 4 },
   offline: { backgroundColor: colors.offlineBg, paddingTop: 14, paddingBottom: 16, gap: 12 },
   offlineTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 },
   offlineText: { flex: 1, gap: 2 },
@@ -99,5 +99,5 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
   },
-  callText: { fontFamily: fonts.w500, fontSize: 15, color: colors.white },
+  callText: { fontFamily: fonts.medium, fontSize: 15, color: colors.white },
 });

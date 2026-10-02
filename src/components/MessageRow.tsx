@@ -2,7 +2,7 @@ import { AudioLines, Check, Mic, Pause, Play, Trash2 } from 'lucide-react-native
 import { memo, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Row } from '@/store/selectors';
-import { colors, fonts, HIT, radii, tracking, type } from '@/theme/tokens';
+import { colors, fonts, MIN_TOUCH_TARGET, radii, tracking, type } from '@/theme/tokens';
 import { clock, duration, sentAgo } from '@/utils/format';
 
 export interface RowPlayState {
@@ -57,14 +57,14 @@ function LengthPill({ ms, play }: { ms: number; play?: RowPlayState }) {
     const from = Math.min(1, position.current / total);
     progress.setValue(from);
     if (!playing) return;
-    const anim = Animated.timing(progress, {
+    const animation = Animated.timing(progress, {
       toValue: 1,
       duration: Math.max(0, total * (1 - from)),
       easing: Easing.linear,
       useNativeDriver: true,
     });
-    anim.start();
-    return () => anim.stop();
+    animation.start();
+    return () => animation.stop();
   }, [active, playing, total, progress]);
 
   return (
@@ -80,10 +80,10 @@ function LengthPill({ ms, play }: { ms: number; play?: RowPlayState }) {
   );
 }
 
-function Tag({ text, bg, fg, caps }: { text: string; bg: string; fg: string; caps?: boolean }) {
+function Tag({ text, background, foreground, caps }: { text: string; background: string; foreground: string; caps?: boolean }) {
   return (
-    <View style={[styles.tag, { backgroundColor: bg }]}>
-      <Text style={[caps ? styles.tagCaps : type.pill, { color: fg }]}>{text}</Text>
+    <View style={[styles.tag, { backgroundColor: background }]}>
+      <Text style={[caps ? styles.tagCaps : type.pill, { color: foreground }]}>{text}</Text>
     </View>
   );
 }
@@ -107,29 +107,29 @@ function PlayButton({ playing, onPress, label }: { playing: boolean; onPress: ()
   );
 }
 
-function Bar({ pct, track, fill }: { pct: number; track: string; fill: string }) {
+function Bar({ percent, track, fill }: { percent: number; track: string; fill: string }) {
   return (
     <View style={[styles.bar, { backgroundColor: track }]}>
-      <View style={[styles.barFill, { width: `${Math.min(100, Math.max(0, pct))}%`, backgroundColor: fill }]} />
+      <View style={[styles.barFill, { width: `${Math.min(100, Math.max(0, percent))}%`, backgroundColor: fill }]} />
     </View>
   );
 }
 
 function MessageRowImpl({ row, play, now, onPlay, onDelete, onRetry }: Props) {
-  const who = row.mine ? <YouChip /> : <Text style={[type.rowStrong, { color: colors.ink }]}>{row.name}</Text>;
-  const a11yWho = row.mine ? 'Your message' : `Message from ${row.name}`;
+  const sender = row.mine ? <YouChip /> : <Text style={[type.rowStrong, { color: colors.ink }]}>{row.name}</Text>;
+  const senderDescription = row.mine ? 'Your message' : `Message from ${row.name}`;
 
   // Weak signal upload: stacked row with progress (05).
-  if (row.receipt.kind === 'sending' && row.receipt.pct !== null) {
+  if (row.receipt.kind === 'sending' && row.receipt.percent !== null) {
     return (
-      <View style={styles.stack} accessible accessibilityLabel={`${a11yWho}, sending ${row.receipt.pct} percent`}>
+      <View style={styles.stack} accessible accessibilityLabel={`${senderDescription}, sending ${row.receipt.percent} percent`}>
         <View style={styles.stackHead}>
-          {who}
-          <Text style={[type.rowStrong, styles.tabular, { color: colors.weakText, fontFamily: fonts.w600 }]}>
-            Sending {row.receipt.pct}%
+          {sender}
+          <Text style={[type.rowStrong, styles.tabular, { color: colors.weakText, fontFamily: fonts.semiBold }]}>
+            Sending {row.receipt.percent}%
           </Text>
         </View>
-        <Bar pct={row.receipt.pct} track={colors.weakBg} fill={colors.weakText} />
+        <Bar percent={row.receipt.percent} track={colors.weakBg} fill={colors.weakText} />
       </View>
     );
   }
@@ -153,12 +153,12 @@ function MessageRowImpl({ row, play, now, onPlay, onDelete, onRetry }: Props) {
       meta = <Text style={styles.meta}>Sending… · {clock(row.at)}</Text>;
       break;
     case 'queued':
-      meta = <Tag text="Not sent yet" bg={colors.offlineBg} fg={colors.offline} />;
+      meta = <Tag text="Not sent yet" background={colors.offlineBg} foreground={colors.offline} />;
       break;
     case 'failed':
       meta = (
         <Pressable onPress={() => onRetry(row.id)} accessibilityRole="button" accessibilityLabel="Not sent. Tap to retry">
-          <Tag text="Not sent · Retry" bg={colors.offlineBg} fg={colors.offline} />
+          <Tag text="Not sent · Retry" background={colors.offlineBg} foreground={colors.offline} />
         </Pressable>
       );
       break;
@@ -169,11 +169,11 @@ function MessageRowImpl({ row, play, now, onPlay, onDelete, onRetry }: Props) {
   return (
     <View style={[styles.row0, styles.row]}>
       <View style={styles.lead}>
-        {who}
-        {row.missed && <Tag text="MISSED" bg={colors.offlineBg} fg={colors.offline} caps />}
+        {sender}
+        {row.missed && <Tag text="MISSED" background={colors.offlineBg} foreground={colors.offline} caps />}
         <LengthPill ms={row.durationMs} play={play.current ? play : undefined} />
-        {row.late && <Tag text={sentAgo(row.at, now)} bg={colors.n200} fg={colors.n700} />}
-        {row.cutShort && <Tag text="Cut short" bg={colors.n200} fg={colors.n700} />}
+        {row.late && <Tag text={sentAgo(row.at, now)} background={colors.neutral200} foreground={colors.neutral700} />}
+        {row.cutShort && <Tag text="Cut short" background={colors.neutral200} foreground={colors.neutral700} />}
       </View>
       {meta}
       {deletable && (
@@ -187,7 +187,7 @@ function MessageRowImpl({ row, play, now, onPlay, onDelete, onRetry }: Props) {
           <Trash2 size={16} color={colors.offline} strokeWidth={2} />
         </Pressable>
       )}
-      <PlayButton playing={play.playing} onPress={() => onPlay(row.id)} label={a11yWho} />
+      <PlayButton playing={play.playing} onPress={() => onPlay(row.id)} label={senderDescription} />
     </View>
   );
 }
@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     paddingLeft: 20,
     paddingRight: 6,
     borderTopWidth: 1,
-    borderTopColor: colors.n300,
+    borderTopColor: colors.neutral300,
   },
   lead: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   stack: {
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 20,
     borderTopWidth: 1,
-    borderTopColor: colors.n300,
+    borderTopColor: colors.neutral300,
   },
   stackHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   you: {
@@ -220,9 +220,9 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: radii.pill,
-    backgroundColor: colors.n200,
+    backgroundColor: colors.neutral200,
   },
-  youText: { fontFamily: fonts.w700, fontSize: 13, color: colors.ink },
+  youText: { fontFamily: fonts.bold, fontSize: 13, color: colors.ink },
   length: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderRadius: radii.pill,
     borderWidth: 1.5,
-    borderColor: colors.n300,
+    borderColor: colors.neutral300,
     overflow: 'hidden',
   },
   lengthActive: { borderColor: colors.live },
@@ -245,8 +245,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.live,
   },
   tag: { paddingVertical: 3, paddingHorizontal: 8, borderRadius: radii.pill },
-  tagCaps: { fontFamily: fonts.w600, fontSize: 11, letterSpacing: tracking(0.08, 11) },
-  meta: { ...type.row, color: colors.n700, fontVariant: ['tabular-nums'] },
+  tagCaps: { fontFamily: fonts.semiBold, fontSize: 11, letterSpacing: tracking(0.08, 11) },
+  meta: { ...type.row, color: colors.neutral700, fontVariant: ['tabular-nums'] },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   tabular: { fontVariant: ['tabular-nums'] },
   // 36px visual, padded to a 44px hit area by the row padding + hitSlop
@@ -258,10 +258,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.white,
     borderWidth: 1.5,
-    borderColor: colors.n300,
+    borderColor: colors.neutral300,
   },
   playActive: { backgroundColor: colors.live, borderColor: colors.live },
-  delete: { width: HIT, height: HIT, alignItems: 'center', justifyContent: 'center', marginRight: -8 },
+  delete: { width: MIN_TOUCH_TARGET, height: MIN_TOUCH_TARGET, alignItems: 'center', justifyContent: 'center', marginRight: -8 },
   bar: { height: 4, borderRadius: 4, overflow: 'hidden' },
   barFill: { height: '100%', borderRadius: 4 },
 });

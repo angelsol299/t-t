@@ -27,7 +27,7 @@ db.execSync(`
   CREATE TABLE IF NOT EXISTS outbox (id TEXT PRIMARY KEY NOT NULL, json TEXT NOT NULL);
 `);
 
-export const kv = {
+export const keyValueStore = {
   get<T>(key: string, fallback: T): T {
     const row = db.getFirstSync<{ value: string }>('SELECT value FROM kv WHERE key = ?', key);
     if (!row) return fallback;

@@ -16,7 +16,7 @@ const STATUS: Record<Net, Status> = {
   online: { label: 'Online', dot: colors.live, halo: colors.liveHalo, haloWidth: 4, text: colors.ink },
   recovering: { label: 'Online', dot: colors.live, halo: colors.liveHalo, haloWidth: 4, text: colors.ink },
   weak: { label: 'Weak', dot: colors.weakDot, halo: colors.weakBg, haloWidth: 3, text: colors.weakText },
-  offline: { label: 'Offline', dot: colors.offline, halo: colors.offlineBg, haloWidth: 4, text: colors.n700 },
+  offline: { label: 'Offline', dot: colors.offline, halo: colors.offlineBg, haloWidth: 4, text: colors.neutral700 },
 };
 
 const DOT = 8;
@@ -72,7 +72,7 @@ interface Props {
 }
 
 export function TopBar({ net, right, onLongPressBrand }: Props) {
-  const st = net ? STATUS[net] : null;
+  const status = net ? STATUS[net] : null;
   return (
     <View style={styles.bar}>
       <Pressable
@@ -84,10 +84,10 @@ export function TopBar({ net, right, onLongPressBrand }: Props) {
         <Logo size={22} />
         <Text style={[type.brand, { color: colors.ink }]}>Teton Talk</Text>
       </Pressable>
-      {st ? (
-        <View style={styles.status} accessibilityLabel={`Network ${st.label}`} accessibilityRole="text">
-          <StatusDot {...st} />
-          <Text style={[type.caps, { color: st.text }]}>{st.label}</Text>
+      {status ? (
+        <View style={styles.status} accessibilityLabel={`Network ${status.label}`} accessibilityRole="text">
+          <StatusDot {...status} />
+          <Text style={[type.caps, { color: status.text }]}>{status.label}</Text>
         </View>
       ) : right ? (
         <Text style={[type.caps, { color: colors.ink }]}>{right}</Text>

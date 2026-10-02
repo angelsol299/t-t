@@ -59,7 +59,7 @@ export default function Join() {
               returnKeyType="go"
               onSubmitEditing={submit}
               placeholder="Your name"
-              placeholderTextColor={colors.n400}
+              placeholderTextColor={colors.neutral400}
               selectionColor={colors.accent}
               cursorColor={colors.accent}
               accessibilityLabel="Your name"
@@ -74,13 +74,13 @@ export default function Join() {
               <Text style={[type.bodyStrong, { color: colors.ink }]} numberOfLines={1}>
                 {trimmed || 'Your name'} is talking…
               </Text>
-              <Text style={[type.meta, { color: colors.n700 }]}>This is how others see you</Text>
+              <Text style={[type.meta, { color: colors.neutral700 }]}>This is how others see you</Text>
             </View>
           </View>
           <View style={styles.spacer} />
           <View style={styles.foot}>
-            <History size={16} color={colors.n700} strokeWidth={2} />
-            <Text style={[type.meta, { color: colors.n700 }]}>Talk is recorded and kept for 30 days.</Text>
+            <History size={16} color={colors.neutral700} strokeWidth={2} />
+            <Text style={[type.meta, { color: colors.neutral700 }]}>Talk is recorded and kept for 30 days.</Text>
           </View>
         </View>
         <Pressable
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     gap: 4,
   },
-  label: { fontFamily: fonts.w700, fontSize: 11, letterSpacing: tracking(0.14, 11), color: colors.n700 },
+  label: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: tracking(0.14, 11), color: colors.neutral700 },
   input: { ...type.input, color: colors.ink, padding: 0, lineHeight: 33 },
   preview: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 4 },
   avatar: {
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { fontFamily: fonts.w700, fontSize: 15, color: colors.ground },
+  avatarText: { fontFamily: fonts.bold, fontSize: 15, color: colors.ground },
   previewText: { flex: 1, gap: 2 },
   spacer: { flex: 1 },
   foot: { flexDirection: 'row', alignItems: 'center', gap: 10 },
@@ -142,5 +142,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   ctaRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  ctaOnline: { fontFamily: fonts.w500, fontSize: 14, color: colors.ground, opacity: 0.7 },
+  ctaOnline: { fontFamily: fonts.medium, fontSize: 14, color: colors.ground, opacity: 0.7 },
 });
