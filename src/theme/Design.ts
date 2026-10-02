@@ -53,43 +53,90 @@ export namespace Design {
     extraBold: 'Archivo_800ExtraBold',
   } as const;
 
+  export const fontSize = {
+    /** size: 56 */
+    hero: 56,
+    /** size: 48 */
+    xxxlarge: 48,
+    /** size: 40 */
+    xxlarge: 40,
+    /** size: 36 */
+    xlarge: 36,
+    /** size: 30 */
+    large: 30,
+    /** size: 20 */
+    medium: 20,
+    /** size: 16 */
+    regular: 16,
+    /** size: 15 */
+    small: 15,
+    /** size: 14 */
+    xsmall: 14,
+    /** size: 13 */
+    xxsmall: 13,
+    /** size: 12 */
+    xxxsmall: 12,
+    /** size: 11 */
+    xxxxsmall: 11,
+  } as const;
+
   /** React Native letterSpacing is in px: em × font size. */
   export const letterSpacing = (ems: number, fontSize: number) => ems * fontSize;
 
   export const typography = StyleSheet.create({
     /** size: 56 */
-    splash: { fontFamily: fontFamily.extraBold, fontSize: 56, letterSpacing: letterSpacing(-0.045, 56), lineHeight: 56 * 0.95 },
+    splash: {
+      fontFamily: fontFamily.extraBold,
+      fontSize: fontSize.hero,
+      letterSpacing: letterSpacing(-0.045, fontSize.hero),
+      lineHeight: fontSize.hero * 0.95,
+    },
     /** size: 48 */
-    channel: { fontFamily: fontFamily.extraBold, fontSize: 48, letterSpacing: letterSpacing(-0.045, 48), lineHeight: 48 },
+    channel: {
+      fontFamily: fontFamily.extraBold,
+      fontSize: fontSize.xxxlarge,
+      letterSpacing: letterSpacing(-0.045, fontSize.xxxlarge),
+      lineHeight: fontSize.xxxlarge,
+    },
     /** size: 40 */
-    headline: { fontFamily: fontFamily.extraBold, fontSize: 40, letterSpacing: letterSpacing(-0.04, 40), lineHeight: 40 },
+    headline: {
+      fontFamily: fontFamily.extraBold,
+      fontSize: fontSize.xxlarge,
+      letterSpacing: letterSpacing(-0.04, fontSize.xxlarge),
+      lineHeight: fontSize.xxlarge,
+    },
     /** size: 36 */
-    speaker: { fontFamily: fontFamily.extraBold, fontSize: 36, letterSpacing: letterSpacing(-0.04, 36), lineHeight: 36 },
+    speaker: {
+      fontFamily: fontFamily.extraBold,
+      fontSize: fontSize.xlarge,
+      letterSpacing: letterSpacing(-0.04, fontSize.xlarge),
+      lineHeight: fontSize.xlarge,
+    },
     /** size: 30 */
-    input: { fontFamily: fontFamily.bold, fontSize: 30, letterSpacing: letterSpacing(-0.03, 30) },
+    input: { fontFamily: fontFamily.bold, fontSize: fontSize.large, letterSpacing: letterSpacing(-0.03, fontSize.large) },
     /** size: 20 */
-    cta: { fontFamily: fontFamily.bold, fontSize: 20 },
+    cta: { fontFamily: fontFamily.bold, fontSize: fontSize.medium },
     /** size: 16 */
-    brand: { fontFamily: fontFamily.extraBold, fontSize: 16, letterSpacing: letterSpacing(-0.03, 16) },
+    brand: { fontFamily: fontFamily.extraBold, fontSize: fontSize.regular, letterSpacing: letterSpacing(-0.03, fontSize.regular) },
     /** size: 15 */
-    bodyStrong: { fontFamily: fontFamily.bold, fontSize: 15 },
+    bodyStrong: { fontFamily: fontFamily.bold, fontSize: fontSize.small },
     /** size: 15 */
-    body: { fontFamily: fontFamily.regular, fontSize: 15 },
+    body: { fontFamily: fontFamily.regular, fontSize: fontSize.small },
     /** size: 14 */
-    row: { fontFamily: fontFamily.regular, fontSize: 14 },
+    row: { fontFamily: fontFamily.regular, fontSize: fontSize.xsmall },
     /** size: 14 */
-    rowStrong: { fontFamily: fontFamily.bold, fontSize: 14 },
+    rowStrong: { fontFamily: fontFamily.bold, fontSize: fontSize.xsmall },
     /** size: 14 */
-    band: { fontFamily: fontFamily.semiBold, fontSize: 14 },
+    band: { fontFamily: fontFamily.semiBold, fontSize: fontSize.xsmall },
     /** size: 13 */
-    meta: { fontFamily: fontFamily.regular, fontSize: 13 },
+    meta: { fontFamily: fontFamily.regular, fontSize: fontSize.xxsmall },
     /** size: 12 */
-    pill: { fontFamily: fontFamily.semiBold, fontSize: 12, fontVariant: ['tabular-nums'] },
+    pill: { fontFamily: fontFamily.semiBold, fontSize: fontSize.xxxsmall, fontVariant: ['tabular-nums'] },
     /** size: 11 */
     caps: {
       fontFamily: fontFamily.semiBold,
-      fontSize: 11,
-      letterSpacing: letterSpacing(0.14, 11),
+      fontSize: fontSize.xxxxsmall,
+      letterSpacing: letterSpacing(0.14, fontSize.xxxxsmall),
       textTransform: 'uppercase',
     },
   });
@@ -105,14 +152,39 @@ export namespace Design {
     pill: 99,
   } as const;
 
-  /** Value to be used as padding, margin or gap in order to give space between elements. */
+  /**
+   * Value to be used as padding, margin or gap in order to give space between elements.
+   * A 4pt scale that keeps the handoff's key values: screen gutter = large, row gap = medium.
+   *
+   * @example
+   * ```ts
+   * viewStyle: {
+   *   paddingHorizontal: Design.space.large,
+   *   gap: Design.space.medium,
+   * }
+   * ```
+   */
   export const space = {
-    /** size: 20 */
-    gutter: 20,
-    /** size: 12 */
-    rowGap: 12,
-    /** size: 10 */
-    inset: 10,
+    /** size: 48 */
+    hero: 48,
+    /** size: 40 */
+    xxxlarge: 40,
+    /** size: 32 */
+    xxlarge: 32,
+    /** size: 24 */
+    xlarge: 24,
+    /** size: 20 (screen gutter) */
+    large: 20,
+    /** size: 16 */
+    regular: 16,
+    /** size: 12 (row gap) */
+    medium: 12,
+    /** size: 8 */
+    small: 8,
+    /** size: 4 */
+    xsmall: 4,
+    /** size: 2 */
+    xxsmall: 2,
   } as const;
 
   export const layout = {

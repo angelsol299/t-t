@@ -67,6 +67,6 @@ export function MessageList() {
 
 const styles = StyleSheet.create({
   list: { flex: 1 },
-  section: { color: Design.color.neutral700, paddingHorizontal: 20, paddingBottom: 10 },
-  empty: { flex: 1, justifyContent: 'flex-end', paddingHorizontal: 20, paddingBottom: 16 },
+  section: { color: Design.color.neutral700, paddingHorizontal: Design.space.large, paddingBottom: Design.space.small },
+  empty: { flex: 1, justifyContent: 'flex-end', paddingHorizontal: Design.space.large, paddingBottom: Design.space.regular },
 });

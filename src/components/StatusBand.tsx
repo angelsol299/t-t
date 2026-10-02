@@ -51,7 +51,7 @@ export function OfflineBand({ since, saved, nextRetryAt, onRetry }: OfflineProps
         </View>
         <Pressable
           onPress={onRetry}
-          hitSlop={12}
+          hitSlop={Design.space.medium}
           accessibilityRole="button"
           accessibilityLabel={retryIn !== null ? `Retrying in ${retryIn} seconds. Retry now` : 'Retry now'}
           style={styles.retry}
@@ -77,18 +77,18 @@ export function OfflineBand({ since, saved, nextRetryAt, onRetry }: OfflineProps
 
 const styles = StyleSheet.create({
   band: {
-    marginHorizontal: 10,
-    marginBottom: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    marginHorizontal: Design.space.small,
+    marginBottom: Design.space.small,
+    paddingVertical: Design.space.medium,
+    paddingHorizontal: Design.space.regular,
     borderRadius: Design.radius.card,
   },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 0, minHeight: 44 },
-  ghost: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: Design.layout.minimumTouchTarget, paddingHorizontal: 4 },
-  offline: { backgroundColor: Design.color.offlineBg, paddingTop: 14, paddingBottom: 16, gap: 12 },
-  offlineTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 },
-  offlineText: { flex: 1, gap: 2 },
-  retry: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  ghost: { flexDirection: 'row', alignItems: 'center', gap: Design.space.xsmall, minHeight: Design.layout.minimumTouchTarget, paddingHorizontal: Design.space.xsmall },
+  offline: { backgroundColor: Design.color.offlineBg, paddingTop: Design.space.medium, paddingBottom: Design.space.regular, gap: Design.space.medium },
+  offlineTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: Design.space.medium },
+  offlineText: { flex: 1, gap: Design.space.xxsmall },
+  retry: { flexDirection: 'row', alignItems: 'center', gap: Design.space.xsmall },
   tabular: { fontVariant: ['tabular-nums'] },
   call: {
     height: 48,
@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: Design.space.regular,
   },
-  callText: { fontFamily: Design.fontFamily.medium, fontSize: 15, color: Design.color.white },
+  callText: { fontFamily: Design.fontFamily.medium, fontSize: Design.fontSize.small, color: Design.color.white },
 });

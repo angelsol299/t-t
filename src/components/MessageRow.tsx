@@ -92,7 +92,7 @@ function PlayButton({ playing, onPress, label }: { playing: boolean; onPress: ()
   return (
     <Pressable
       onPress={onPress}
-      hitSlop={4}
+      hitSlop={Design.space.xsmall}
       accessibilityRole="button"
       accessibilityLabel={playing ? 'Pause' : 'Play'}
       accessibilityHint={label}
@@ -101,7 +101,7 @@ function PlayButton({ playing, onPress, label }: { playing: boolean; onPress: ()
       {playing ? (
         <Pause size={13} color={Design.color.liveText} fill={Design.color.liveText} strokeWidth={0} />
       ) : (
-        <Play size={13} color={Design.color.ink} fill={Design.color.ink} strokeWidth={0} style={{ marginLeft: 2 }} />
+        <Play size={13} color={Design.color.ink} fill={Design.color.ink} strokeWidth={0} style={{ marginLeft: Design.space.xxsmall }} />
       )}
     </Pressable>
   );
@@ -195,20 +195,20 @@ function MessageRowImpl({ row, play, now, onPlay, onDelete, onRetry }: Props) {
 export const MessageRow = memo(MessageRowImpl);
 
 const styles = StyleSheet.create({
-  row0: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  row0: { flexDirection: 'row', alignItems: 'center', gap: Design.space.medium },
   row: {
     minHeight: 48,
-    paddingVertical: 6,
-    paddingLeft: 20,
-    paddingRight: 6,
+    paddingVertical: Design.space.xsmall,
+    paddingLeft: Design.space.large,
+    paddingRight: Design.space.small,
     borderTopWidth: 1,
     borderTopColor: Design.color.neutral300,
   },
-  lead: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  lead: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: Design.space.small, flexWrap: 'wrap' },
   stack: {
-    gap: 10,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    gap: Design.space.small,
+    paddingVertical: Design.space.medium,
+    paddingHorizontal: Design.space.large,
     borderTopWidth: 1,
     borderTopColor: Design.color.neutral300,
   },
@@ -216,19 +216,19 @@ const styles = StyleSheet.create({
   you: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
+    gap: Design.space.xsmall,
+    paddingVertical: Design.space.xsmall,
+    paddingHorizontal: Design.space.small,
     borderRadius: Design.radius.pill,
     backgroundColor: Design.color.neutral200,
   },
-  youText: { fontFamily: Design.fontFamily.bold, fontSize: 13, color: Design.color.ink },
+  youText: { fontFamily: Design.fontFamily.bold, fontSize: Design.fontSize.xxsmall, color: Design.color.ink },
   length: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingVertical: 2,
-    paddingHorizontal: 8,
+    gap: Design.space.xsmall,
+    paddingVertical: Design.space.xxsmall,
+    paddingHorizontal: Design.space.small,
     borderRadius: Design.radius.pill,
     borderWidth: 1.5,
     borderColor: Design.color.neutral300,
@@ -244,10 +244,10 @@ const styles = StyleSheet.create({
     transformOrigin: 'left',
     backgroundColor: Design.color.live,
   },
-  tag: { paddingVertical: 3, paddingHorizontal: 8, borderRadius: Design.radius.pill },
-  tagCaps: { fontFamily: Design.fontFamily.semiBold, fontSize: 11, letterSpacing: Design.letterSpacing(0.08, 11) },
+  tag: { paddingVertical: Design.space.xsmall, paddingHorizontal: Design.space.small, borderRadius: Design.radius.pill },
+  tagCaps: { fontFamily: Design.fontFamily.semiBold, fontSize: Design.fontSize.xxxxsmall, letterSpacing: Design.letterSpacing(0.08, Design.fontSize.xxxxsmall) },
   meta: { ...Design.typography.row, color: Design.color.neutral700, fontVariant: ['tabular-nums'] },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: Design.space.xsmall },
   tabular: { fontVariant: ['tabular-nums'] },
   // 36px visual, padded to a 44px hit area by the row padding + hitSlop
   play: {
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
     borderColor: Design.color.neutral300,
   },
   playActive: { backgroundColor: Design.color.live, borderColor: Design.color.live },
-  delete: { width: Design.layout.minimumTouchTarget, height: Design.layout.minimumTouchTarget, alignItems: 'center', justifyContent: 'center', marginRight: -8 },
+  delete: { width: Design.layout.minimumTouchTarget, height: Design.layout.minimumTouchTarget, alignItems: 'center', justifyContent: 'center', marginRight: -Design.space.small },
   bar: { height: 4, borderRadius: 4, overflow: 'hidden' },
   barFill: { height: '100%', borderRadius: 4 },
 });

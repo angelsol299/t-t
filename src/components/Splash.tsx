@@ -23,14 +23,14 @@ export function Splash() {
 
 const styles = StyleSheet.create({
   root: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: Design.color.ink },
-  center: { flex: 1, justifyContent: 'center', gap: 28, paddingHorizontal: 28 },
-  words: { gap: 10 },
+  center: { flex: 1, justifyContent: 'center', gap: Design.space.xlarge, paddingHorizontal: Design.space.xlarge },
+  words: { gap: Design.space.small },
   tagline: { ...Design.typography.body, color: Design.color.neutral400 },
   footer: {
     borderTopWidth: 2,
     borderTopColor: Design.color.neutral700,
-    marginHorizontal: 28,
-    paddingTop: 18,
-    paddingBottom: 28,
+    marginHorizontal: Design.space.xlarge,
+    paddingTop: Design.space.regular,
+    paddingBottom: Design.space.xlarge,
   },
 });

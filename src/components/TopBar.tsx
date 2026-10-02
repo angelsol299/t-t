@@ -101,11 +101,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 18,
-    paddingHorizontal: 20,
+    paddingVertical: Design.space.regular,
+    paddingHorizontal: Design.space.large,
   },
-  brand: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  status: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  brand: { flexDirection: 'row', alignItems: 'center', gap: Design.space.small },
+  status: { flexDirection: 'row', alignItems: 'center', gap: Design.space.small },
   // Laid out as the 8px dot; the halo and pulse ring overflow it, like the
   // handoff's box-shadow halo.
   dotBox: { width: DOT, height: DOT, alignItems: 'center', justifyContent: 'center' },
