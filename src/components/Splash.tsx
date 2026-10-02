@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, fonts, type } from '@/theme/tokens';
+import { colors, type } from '@/theme/tokens';
 import { Logo } from './Logo';
 
 /** 00: shown over the native splash (same ink) while the channel connects. */
@@ -25,7 +25,7 @@ const styles = StyleSheet.create({
   root: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: colors.ink },
   center: { flex: 1, justifyContent: 'center', gap: 28, paddingHorizontal: 28 },
   words: { gap: 10 },
-  tagline: { fontFamily: fonts.w400, fontSize: 15, color: colors.n400 },
+  tagline: { ...type.body, color: colors.n400 },
   footer: {
     borderTopWidth: 2,
     borderTopColor: colors.n700,

@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNow } from '@/hooks/useNow';
 import { MAX_CLIP_MS } from '@shared/protocol';
-import { colors, radii, type } from '@/theme/tokens';
+import { colors, fonts, radii, type } from '@/theme/tokens';
 import { duration } from '@/utils/format';
 
 export type PttState =
@@ -188,5 +188,5 @@ const styles = StyleSheet.create({
   meterBar: { width: 4, borderRadius: 4 },
   tabular: { fontVariant: ['tabular-nums'] },
   flex: { flex: 1 },
-  talking: { color: colors.talkSecondary, fontFamily: 'Archivo_600SemiBold', marginTop: 4 },
+  talking: { color: colors.talkSecondary, fontFamily: fonts.w600, marginTop: 4 },
 });

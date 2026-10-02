@@ -13,7 +13,11 @@
       "appleTeamId": "KGZPL9JZ7K"
     },
     "android": {
-      "package": "com.teton.talk"
+      "package": "com.teton.talk",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#201e1d"
+      }
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
