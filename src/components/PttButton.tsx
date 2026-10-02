@@ -2,7 +2,6 @@ import { Mic, MicOff } from 'lucide-react-native';
 import { useMemo } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNow } from '@/hooks/useNow';
-import { debugTrace } from '@/utils/debugTrace'; // TEMP DEBUG
 import { MAX_CLIP_MS } from '@shared/protocol';
 import { colors, fonts, radii, type } from '@/theme/tokens';
 import { duration } from '@/utils/format';
@@ -45,7 +44,6 @@ function LevelMeter({ level, bars, color }: { level: number; bars: number; color
 function Timer({ startedAt, color, warnColor }: { startedAt: number; color: string; warnColor?: string }) {
   const now = useNow(true, 250);
   const elapsed = now - startedAt;
-  debugTrace.log('timer-render', { elapsed }); // TEMP DEBUG
   const warn = warnColor && MAX_CLIP_MS - elapsed <= 10_000;
   return <Text style={[type.headline, styles.tabular, { color: warn ? warnColor : color }]}>{duration(elapsed)}</Text>;
 }

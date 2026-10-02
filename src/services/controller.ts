@@ -1,15 +1,15 @@
-import NetInfo from '@react-native-community/netinfo';
-import { randomUUID } from 'expo-crypto';
-import * as Haptics from 'expo-haptics';
-import { clipPlayer } from '@/audio/clipPlayer';
-import { debugTrace } from '@/utils/debugTrace'; // TEMP DEBUG
-import { micPermission, startRecording, stopRecording } from '@/audio/recorder';
-import { streamPlayer } from '@/audio/streamPlayer';
-import { goLiveTone } from '@/audio/tone';
-import { SERVER_URL } from '@/config';
-import type { AppDispatch, RootState } from '@/store';
-import { channelApi, setHeardBy, upsertMessages } from '@/store/api/channelApi';
-import { netEvent, setMissedOnReturn, setNextRetry, setOnline } from '@/store/slices/connection';
+import { clipPlayer } from "@/audio/clipPlayer";
+import { micPermission, startRecording, stopRecording } from "@/audio/recorder";
+import { streamPlayer } from "@/audio/streamPlayer";
+import { goLiveTone } from "@/audio/tone";
+import { SERVER_URL } from "@/config";
+import type { AppDispatch, RootState } from "@/store";
+import {
+  netEvent,
+  setMissedOnReturn,
+  setNextRetry,
+  setOnline,
+} from "@/store/slices/connection";
 import {
   setDenied,
   setHolding,
@@ -20,10 +20,21 @@ import {
   setSpeaker,
   startMine,
   stopMine,
-} from '@/store/slices/floor';
-import { clearQueue, enqueue, finished, markMissed, paused, progress, started, stopped } from '@/store/slices/playback';
-import { advanceSeq, setServerOffset } from '@/store/slices/session';
-import { mulawRootMeanSquare } from '@shared/mulaw';
+} from "@/store/slices/floor";
+import { setHeardBy, upsertMessages } from "@/store/slices/messages";
+import {
+  clearQueue,
+  enqueue,
+  finished,
+  markMissed,
+  paused,
+  progress,
+  started,
+  stopped,
+} from "@/store/slices/playback";
+import { advanceSeq, setServerOffset } from "@/store/slices/session";
+import NetInfo from "@react-native-community/netinfo";
+import { mulawRootMeanSquare } from "@shared/mulaw";
 import {
   CHUNK_MS,
   CHUNK_SAMPLES,
@@ -33,11 +44,13 @@ import {
   encodeChunkFrame,
   type ChannelMessage,
   type ServerMessage,
-} from '@shared/protocol';
-import { audioCache, clipFiles } from './files';
-import { createOutbox } from './outbox';
-import { registry } from './registry';
-import { createSocket } from './socket';
+} from "@shared/protocol";
+import { randomUUID } from "expo-crypto";
+import * as Haptics from "expo-haptics";
+import { audioCache, clipFiles } from "./files";
+import { createOutbox } from "./outbox";
+import { registry } from "./registry";
+import { createSocket } from "./socket";
 
 const GRANT_TIMEOUT_MS = 1000; // no answer to floor_request → record-and-send
 const LIVE_SETTLE_MS = 1500; // give in-flight live chunks a moment before uploading
@@ -49,14 +62,16 @@ interface Store {
   subscribe(listener: () => void): () => void;
 }
 
-const heavyHaptic = () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+const heavyHaptic = () =>
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
 const doubleBuzz = () => {
   heavyHaptic();
   setTimeout(heavyHaptic, 140);
 };
 
 /** How many chunks a committed clip has; used to tell "heard it all live". */
-const chunkCountFor = (durationMs: number) => Math.ceil(Math.round((durationMs * 8000) / 1000) / CHUNK_SAMPLES);
+const chunkCountFor = (durationMs: number) =>
+  Math.ceil(Math.round((durationMs * 8000) / 1000) / CHUNK_SAMPLES);
 
 export function createController(store: Store) {
   const { dispatch, getState } = store;
@@ -92,22 +107,30 @@ export function createController(store: Store) {
   const socket = createSocket({
     hello: () => {
       const session = getState().session;
-      return { type: 'hello', clientId: session.clientId, name: session.name ?? 'Unknown', lastSeq: session.lastSeq };
+      return {
+        type: "hello",
+        clientId: session.clientId,
+        name: session.name ?? "Unknown",
+        lastSeq: session.lastSeq,
+      };
     },
-    onLinkUp: () => dispatch(netEvent({ type: 'link_up', at: Date.now() })),
+    onLinkUp: () => dispatch(netEvent({ type: "link_up", at: Date.now() })),
     onLinkDown: () => {
-      dispatch(netEvent({ type: 'link_down', at: Date.now() }));
+      dispatch(netEvent({ type: "link_down", at: Date.now() }));
       // We can no longer hear the speaker or reach listeners.
       streamPlayer.end();
       dispatch(setSpeaker(null));
-      if (getState().floor.my && getState().floor.my!.mode !== 'local') dispatch(setMyMode('local'));
+      if (getState().floor.my && getState().floor.my!.mode !== "local")
+        dispatch(setMyMode("local"));
     },
     onPong: (roundTripMs, serverTime) => {
-      dispatch(netEvent({ type: 'pong', at: Date.now(), roundTripMs }));
+      dispatch(netEvent({ type: "pong", at: Date.now(), roundTripMs }));
       const offset = Math.round(serverTime - Date.now());
-      if (Math.abs(offset - getState().session.serverOffset) > 250) dispatch(setServerOffset(offset));
+      if (Math.abs(offset - getState().session.serverOffset) > 250)
+        dispatch(setServerOffset(offset));
     },
-    onPingMissed: () => dispatch(netEvent({ type: 'ping_missed', at: Date.now() })),
+    onPingMissed: () =>
+      dispatch(netEvent({ type: "ping_missed", at: Date.now() })),
     onRetryScheduled: (at) => dispatch(setNextRetry(at)),
     onMessage,
     onBinary,
@@ -115,24 +138,36 @@ export function createController(store: Store) {
 
   function onMessage(message: ServerMessage) {
     switch (message.type) {
-      case 'welcome': {
+      case "welcome": {
         dispatch(setOnline(message.online));
         dispatch(setServerOffset(message.serverTime - Date.now()));
         const myClientId = getState().session.clientId;
-        dispatch(setSpeaker(message.floor && message.floor.clientId !== myClientId ? message.floor : null));
+        dispatch(
+          setSpeaker(
+            message.floor && message.floor.clientId !== myClientId
+              ? message.floor
+              : null,
+          ),
+        );
         const firstJoin = getState().session.lastSeq === 0;
         const fresh = onCommitted(message.missed, firstJoin);
-        if (getState().connection.net === 'recovering') dispatch(setMissedOnReturn(fresh));
+        if (getState().connection.net === "recovering")
+          dispatch(setMissedOnReturn(fresh));
         outbox.kickNow();
         break;
       }
-      case 'presence':
+      case "presence":
         dispatch(setOnline(message.online));
         break;
-      case 'floor_granted':
-        if (activeRecording && activeRecording.clipId === message.clipId && getState().floor.my?.mode !== 'local') goLive();
+      case "floor_granted":
+        if (
+          activeRecording &&
+          activeRecording.clipId === message.clipId &&
+          getState().floor.my?.mode !== "local"
+        )
+          goLive();
         break;
-      case 'floor_denied':
+      case "floor_denied":
         if (activeRecording && activeRecording.clipId === message.clipId) {
           // Lost the race: nothing is recorded. Keep holding to go next.
           void discardRecording();
@@ -142,20 +177,22 @@ export function createController(store: Store) {
           doubleBuzz();
         }
         break;
-      case 'floor_taken': {
+      case "floor_taken": {
         dispatch(setSpeaker(message.speaker));
         streamPlayer.begin(message.speaker.clipId);
         interruptPlayback();
         break;
       }
-      case 'floor_free': {
+      case "floor_free": {
         const speaker = getState().floor.speaker;
         if (!speaker || speaker.clipId !== message.clipId) break;
         streamPlayer.end();
         dispatch(setSpeaker(null));
         dispatch(setLevel(0));
-        if (message.reason !== 'released') {
-          notice(`${speaker.name}'s signal dropped — the message will arrive in full`);
+        if (message.reason !== "released") {
+          notice(
+            `${speaker.name}'s signal dropped — the message will arrive in full`,
+          );
         }
         // Still holding after losing the race: you go live the moment they stop.
         if (getState().floor.holding && !activeRecording) {
@@ -166,18 +203,23 @@ export function createController(store: Store) {
         }
         break;
       }
-      case 'chunk_ack':
+      case "chunk_ack":
         outbox.acked(message.clipId, message.upTo);
         if (activeRecording?.clipId === message.clipId) {
           lastLiveChunkAcked = Math.max(lastLiveChunkAcked, message.upTo);
           reportBacklog();
         }
         break;
-      case 'message':
+      case "message":
         onCommitted([message.message], false);
         break;
-      case 'receipt':
-        dispatch(setHeardBy(message.messageId, message.heardBy));
+      case "receipt":
+        dispatch(
+          setHeardBy({
+            messageId: message.messageId,
+            heardBy: message.heardBy,
+          }),
+        );
         break;
     }
   }
@@ -186,7 +228,7 @@ export function createController(store: Store) {
     const frame = decodeChunkFrame(data);
     const speaker = getState().floor.speaker;
     if (!frame || !speaker || speaker.clipId !== frame.clipId) return;
-    if (activeRecording && getState().floor.my?.mode === 'live') return; // half duplex
+    if (activeRecording && getState().floor.my?.mode === "live") return; // half duplex
     streamPlayer.chunk(frame.clipId, frame.seq, frame.payload);
     dispatch(setLevel(Math.min(1, mulawRootMeanSquare(frame.payload) * 4)));
   }
@@ -206,9 +248,15 @@ export function createController(store: Store) {
         outbox.committed(message.id);
         continue;
       }
-      if (streamPlayer.heardChunks(message.id) >= chunkCountFor(message.durationMs)) {
-        socket.send({ type: 'played', messageId: message.id }); // heard it all live
-      } else if (!asHistory && !getState().playback.missed.includes(message.id)) {
+      if (
+        streamPlayer.heardChunks(message.id) >=
+        chunkCountFor(message.durationMs)
+      ) {
+        socket.send({ type: "played", messageId: message.id }); // heard it all live
+      } else if (
+        !asHistory &&
+        !getState().playback.missed.includes(message.id)
+      ) {
         missed.push(message.id);
       }
       streamPlayer.forget(message.id);
@@ -224,25 +272,31 @@ export function createController(store: Store) {
   // ── talking ─────────────────────────────────────────────────────────────
   function sendLive(seq: number, bytes: Uint8Array) {
     if (!activeRecording) return;
-    if (socket.sendBinary(encodeChunkFrame(activeRecording.clipId, seq, bytes))) activeRecording.sentUpTo = seq;
+    if (socket.sendBinary(encodeChunkFrame(activeRecording.clipId, seq, bytes)))
+      activeRecording.sentUpTo = seq;
     reportBacklog();
   }
 
   function reportBacklog() {
     if (!activeRecording) return;
-    const ms = Math.max(0, activeRecording.sentUpTo - lastLiveChunkAcked) * CHUNK_MS;
-    dispatch(netEvent({ type: 'backlog', at: Date.now(), ms }));
+    const ms =
+      Math.max(0, activeRecording.sentUpTo - lastLiveChunkAcked) * CHUNK_MS;
+    dispatch(netEvent({ type: "backlog", at: Date.now(), ms }));
   }
 
   function goLive() {
     if (!activeRecording) return;
     if (activeRecording.grantTimer) clearTimeout(activeRecording.grantTimer);
     activeRecording.grantTimer = null;
-    dispatch(setMyMode('live'));
+    dispatch(setMyMode("live"));
     heavyHaptic();
     goLiveTone();
     // Send what was recorded while the floor request was in flight.
-    for (let seq = activeRecording.sentUpTo + 1; seq < activeRecording.recorded; seq++) {
+    for (
+      let seq = activeRecording.sentUpTo + 1;
+      seq < activeRecording.recorded;
+      seq++
+    ) {
       const bytes = clipFiles.readChunk(activeRecording.clipId, seq);
       if (bytes) sendLive(seq, bytes);
     }
@@ -254,10 +308,10 @@ export function createController(store: Store) {
     const clipId = randomUUID();
     const recordedAt = serverNow();
     const net = getState().connection;
-    const canStream = socket.isUp && (net.net === 'online' || net.net === 'recovering');
-    const mode = canStream ? 'pending' : 'local';
+    const canStream =
+      socket.isUp && (net.net === "online" || net.net === "recovering");
+    const mode = canStream ? "pending" : "local";
     dispatch(startMine({ clipId, startedAt: Date.now(), mode }));
-    debugTrace.log('startMine', { mode, canStream }); // TEMP DEBUG
     outbox.begin(clipId, recordedAt);
     lastLiveChunkAcked = -1;
     const recording: NonNullable<typeof activeRecording> = {
@@ -276,28 +330,30 @@ export function createController(store: Store) {
     streamPlayer.setMuted(true);
     recording.startPromise = startRecording({
       onChunk: (seq, bytes) => {
-        debugTrace.log('chunk', { seq }); // TEMP DEBUG
         clipFiles.writeChunk(clipId, seq, bytes); // disk first, then the wire
         if (activeRecording !== recording) return;
         recording.recorded = seq + 1;
-        if (getState().floor.my?.mode === 'live') sendLive(seq, bytes);
+        if (getState().floor.my?.mode === "live") sendLive(seq, bytes);
       },
       onLevel: (level) => dispatch(setLevel(level)),
     });
     if (canStream) {
-      socket.send({ type: 'floor_request', clipId, recordedAt });
+      socket.send({ type: "floor_request", clipId, recordedAt });
       recording.grantTimer = setTimeout(() => {
-        if (activeRecording === recording && getState().floor.my?.mode === 'pending') dispatch(setMyMode('local'));
+        if (
+          activeRecording === recording &&
+          getState().floor.my?.mode === "pending"
+        )
+          dispatch(setMyMode("local"));
       }, GRANT_TIMEOUT_MS);
     } else {
       heavyHaptic();
     }
     if (afterWait && !canStream) goLiveTone();
     const micStarted = await recording.startPromise;
-    debugTrace.log('micStarted', { micStarted }); // TEMP DEBUG
     if (!micStarted && activeRecording === recording) {
       await discardRecording();
-      notice('Could not open the microphone');
+      notice("Could not open the microphone");
     }
   }
 
@@ -310,7 +366,7 @@ export function createController(store: Store) {
     await recording.startPromise;
     const result = await stopRecording();
     streamPlayer.setMuted(false);
-    dispatch(netEvent({ type: 'backlog', at: Date.now(), ms: 0 }));
+    dispatch(netEvent({ type: "backlog", at: Date.now(), ms: 0 }));
     return { recording, ...result };
   }
 
@@ -319,8 +375,14 @@ export function createController(store: Store) {
     const res = await finishRecording();
     dispatch(stopMine());
     if (!res) return;
-    if (mode === 'live' || mode === 'pending') {
-      socket.send({ type: 'floor_release', clipId: res.recording.clipId, total: 0, durationMs: 0, recordedAt: 0 });
+    if (mode === "live" || mode === "pending") {
+      socket.send({
+        type: "floor_release",
+        clipId: res.recording.clipId,
+        total: 0,
+        durationMs: 0,
+        recordedAt: 0,
+      });
     }
     outbox.discard(res.recording.clipId);
   }
@@ -333,28 +395,51 @@ export function createController(store: Store) {
     if (!res) return;
     const { recording, total, durationMs } = res;
     if (durationMs < MIN_CLIP_MS || total === 0) {
-      if (my.mode !== 'local') {
-        socket.send({ type: 'floor_release', clipId: recording.clipId, total: 0, durationMs: 0, recordedAt: 0 });
+      if (my.mode !== "local") {
+        socket.send({
+          type: "floor_release",
+          clipId: recording.clipId,
+          total: 0,
+          durationMs: 0,
+          recordedAt: 0,
+        });
       }
       outbox.discard(recording.clipId);
-      notice('Hold the button to talk', 2500);
+      notice("Hold the button to talk", 2500);
       resumePlayback();
       return;
     }
     outbox.finish(recording.clipId, total, durationMs);
-    if (my.mode === 'live') {
+    if (my.mode === "live") {
       // Send the tail chunk(s), then release: the server commits if it has
       // everything; otherwise the outbox fills the gaps over HTTP.
       for (let seq = recording.sentUpTo + 1; seq < total; seq++) {
         const bytes = clipFiles.readChunk(recording.clipId, seq);
-        if (bytes && socket.sendBinary(encodeChunkFrame(recording.clipId, seq, bytes))) recording.sentUpTo = seq;
+        if (
+          bytes &&
+          socket.sendBinary(encodeChunkFrame(recording.clipId, seq, bytes))
+        )
+          recording.sentUpTo = seq;
       }
-      const recordedAt = getState().outbox.items[recording.clipId]?.recordedAt ?? serverNow();
-      socket.send({ type: 'floor_release', clipId: recording.clipId, total, durationMs, recordedAt });
+      const recordedAt =
+        getState().outbox.items[recording.clipId]?.recordedAt ?? serverNow();
+      socket.send({
+        type: "floor_release",
+        clipId: recording.clipId,
+        total,
+        durationMs,
+        recordedAt,
+      });
       setTimeout(() => void outbox.kick(), LIVE_SETTLE_MS);
     } else {
-      if (my.mode === 'pending') {
-        socket.send({ type: 'floor_release', clipId: recording.clipId, total: 0, durationMs: 0, recordedAt: 0 });
+      if (my.mode === "pending") {
+        socket.send({
+          type: "floor_release",
+          clipId: recording.clipId,
+          total: 0,
+          durationMs: 0,
+          recordedAt: 0,
+        });
       }
       void outbox.kick();
     }
@@ -377,12 +462,13 @@ export function createController(store: Store) {
     }
   }
 
-  const busy = () => activeRecording !== null || getState().floor.speaker !== null;
+  const busy = () =>
+    activeRecording !== null || getState().floor.speaker !== null;
 
   async function play(messageId: string, fromMs = 0) {
     const bytes = await loadClip(messageId);
     if (!bytes) {
-      notice('That message will play once you are back online', 3000);
+      notice("That message will play once you are back online", 3000);
       return;
     }
     if (busy()) {
@@ -393,7 +479,8 @@ export function createController(store: Store) {
       onProgress: (ms) => dispatch(progress(ms)),
       onEnd: () => {
         dispatch(finished(messageId));
-        if (!getState().outbox.items[messageId]) socket.send({ type: 'played', messageId });
+        if (!getState().outbox.items[messageId])
+          socket.send({ type: "played", messageId });
         playNext();
       },
     });
@@ -410,7 +497,10 @@ export function createController(store: Store) {
     const currentPlayback = getState().playback.current;
     if (!currentPlayback?.playing) return;
     clipPlayer.stop();
-    resumeAfter = { messageId: currentPlayback.messageId, positionMs: currentPlayback.positionMs };
+    resumeAfter = {
+      messageId: currentPlayback.messageId,
+      positionMs: currentPlayback.positionMs,
+    };
     dispatch(paused());
   }
 
@@ -423,7 +513,10 @@ export function createController(store: Store) {
   }
 
   // ── wiring ──────────────────────────────────────────────────────────────
-  const ticker = setInterval(() => dispatch(netEvent({ type: 'tick', at: Date.now() })), 250);
+  const ticker = setInterval(
+    () => dispatch(netEvent({ type: "tick", at: Date.now() })),
+    250,
+  );
   const unsubNet = NetInfo.addEventListener((netState) => {
     if (netState.isConnected === false) socket.dropNow();
     else if (netState.isConnected) socket.retryNow();
@@ -436,13 +529,15 @@ export function createController(store: Store) {
     if (net === lastNet) return;
     lastNet = net;
     const my = getState().floor.my;
-    if (my && my.mode !== 'local' && (net === 'weak' || net === 'offline')) dispatch(setMyMode('local'));
+    if (my && my.mode !== "local" && (net === "weak" || net === "offline"))
+      dispatch(setMyMode("local"));
   });
 
   const controller = {
     async start() {
       outbox.restore();
-      const granted = (await micPermission(false)) || (await micPermission(true));
+      const granted =
+        (await micPermission(false)) || (await micPermission(true));
       dispatch(setMicDenied(!granted));
       socket.start();
     },
@@ -453,14 +548,12 @@ export function createController(store: Store) {
       socket.stop();
     },
     pressIn() {
-      debugTrace.begin({ net: getState().connection.net, socketUp: socket.isUp, speaker: !!getState().floor.speaker }); // TEMP DEBUG
       dispatch(setHolding(true));
       // Someone is live: keep holding and you go live when they stop (04).
       if (getState().floor.speaker) return;
       void beginTalking();
     },
     pressOut() {
-      debugTrace.end({ my: getState().floor.my, recording: activeRecording ? { recorded: activeRecording.recorded } : null }); // TEMP DEBUG
       dispatch(setHolding(false));
       if (activeRecording) void endTalking();
     },
@@ -473,12 +566,22 @@ export function createController(store: Store) {
         return;
       }
       if (busy()) return;
-      void play(messageId, currentPlayback?.messageId === messageId ? currentPlayback.positionMs : 0);
+      void play(
+        messageId,
+        currentPlayback?.messageId === messageId
+          ? currentPlayback.positionMs
+          : 0,
+      );
     },
     replayAll() {
       const missed = getState().playback.missed;
-      const order = channelApi.endpoints.getMessages.select()(getState()).data ?? [];
-      dispatch(enqueue(order.filter((message) => missed.includes(message.id)).map((message) => message.id)));
+      dispatch(
+        enqueue(
+          getState()
+            .messages.list.filter((message) => missed.includes(message.id))
+            .map((message) => message.id),
+        ),
+      );
       playNext();
     },
     stopPlayback() {
@@ -496,10 +599,12 @@ export function createController(store: Store) {
     },
     retryClip: (clipId: string) => outbox.retry(clipId),
     deleteQueued(clipId: string) {
-      if (getState().playback.current?.messageId === clipId) controller.stopPlayback();
+      if (getState().playback.current?.messageId === clipId)
+        controller.stopPlayback();
       outbox.discard(clipId);
     },
-    markPlayed: (messageId: string) => socket.send({ type: 'played', messageId }),
+    markPlayed: (messageId: string) =>
+      socket.send({ type: "played", messageId }),
     async askMic() {
       const micStarted = await micPermission(true);
       dispatch(setMicDenied(!micStarted));

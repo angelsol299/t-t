@@ -1,6 +1,5 @@
 import { createSelector } from '@reduxjs/toolkit';
 import { isLate } from '@shared/protocol';
-import { channelApi } from './api/channelApi';
 import type { RootState } from './index';
 
 // One receipt per message (handoff "Receipts" table).
@@ -24,11 +23,9 @@ export interface Row {
   pending: boolean; // still in my outbox (deletable)
 }
 
-const selectMessages = channelApi.endpoints.getMessages.select();
-
 export const selectRows = createSelector(
   [
-    (state: RootState) => selectMessages(state).data,
+    (state: RootState) => state.messages.list,
     (state: RootState) => state.outbox.items,
     (state: RootState) => state.playback.missed,
     (state: RootState) => state.session.clientId,
@@ -36,7 +33,7 @@ export const selectRows = createSelector(
     (state: RootState) => state.connection.net,
     (state: RootState) => state.connection.linkUp,
   ],
-  (messages = [], outbox, missed, me, offset, net, linkUp): Row[] => {
+  (messages, outbox, missed, me, offset, net, linkUp): Row[] => {
     const committed = new Set(messages.map((message) => message.id));
     const rows: Row[] = messages.map((message) => ({
       id: message.id,

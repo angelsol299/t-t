@@ -10,13 +10,11 @@ import { TopBar } from '@/components/TopBar';
 import { CHANNEL_NAME } from '@/config';
 import { useController } from '@/hooks/useController';
 import { useAppSelector } from '@/store';
-import { useGetMessagesQuery } from '@/store/api/channelApi';
 import { selectSavedCount } from '@/store/selectors';
 import { colors } from '@/theme/tokens';
 
 /** 02–08: one screen; every state is driven by the store. */
 export default function Channel() {
-  useGetMessagesQuery();
   const controller = useController();
   const connection = useAppSelector((state) => state.connection);
   const floor = useAppSelector((state) => state.floor);

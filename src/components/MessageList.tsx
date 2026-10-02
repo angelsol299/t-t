@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { useController } from '@/hooks/useController';
 import { useNow } from '@/hooks/useNow';
-import { useDeleteQueuedMutation, useRetryClipMutation } from '@/store/api/channelApi';
 import { useAppSelector } from '@/store';
 import { selectRows, type Row } from '@/store/selectors';
 import { colors, type } from '@/theme/tokens';
@@ -14,8 +13,6 @@ export function MessageList() {
   const rows = useAppSelector(selectRows);
   const playback = useAppSelector((state) => state.playback);
   const controller = useController();
-  const [deleteQueued] = useDeleteQueuedMutation();
-  const [retryClip] = useRetryClipMutation();
   const now = useNow(rows.some((row) => row.late), 30_000);
   const list = useRef<FlatList<Row>>(null);
   // Follow the end like a chat: content growth keeps the list pinned only
@@ -25,8 +22,8 @@ export function MessageList() {
   const pinnedFor = useRef(0);
 
   const onPlay = useCallback((id: string) => controller.togglePlay(id), [controller]);
-  const onDelete = useCallback((id: string) => void deleteQueued(id), [deleteQueued]);
-  const onRetry = useCallback((id: string) => void retryClip(id), [retryClip]);
+  const onDelete = useCallback((id: string) => controller.deleteQueued(id), [controller]);
+  const onRetry = useCallback((id: string) => controller.retryClip(id), [controller]);
 
   useEffect(() => {
     // Keep the newest message in view as rows arrive.

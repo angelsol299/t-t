@@ -126,7 +126,7 @@ src/app/            routes: _layout (fonts, splash hold, controller start), join
 src/components/     TopBar, ChannelHeader, StatusBand, MessageList/Row, PttButton, FloorDeniedCard, Splash, Logo
 src/services/       controller (PTT, floor, playback), socket (heartbeat, backoff), outbox (resumable upload), db, files
 src/audio/          recorder (mic → µ-law chunks), streamPlayer (live, jitter buffer), clipPlayer, tone
-src/store/          Redux Toolkit slices, RTK Query message list, selectors (one receipt per row)
+src/store/          Redux Toolkit slices (incl. the message list), selectors (one receipt per row)
 shared/             protocol.ts, mulaw.ts, netMachine.ts
 server/src/         index (http + ws), channel (presence, floor + lease, relay, commit), http (upload API), db, clips
 simulator/          cli + scenarios, bots + REPL, tests, samples/

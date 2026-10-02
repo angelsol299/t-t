@@ -1,9 +1,9 @@
 import { configureStore, createListenerMiddleware, isAnyOf } from '@reduxjs/toolkit';
 import { useDispatch, useSelector } from 'react-redux';
-import { keyValueStore } from '@/services/db';
-import { channelApi } from './api/channelApi';
+import { keyValueStore, messageCache } from '@/services/db';
 import connection from './slices/connection';
 import floor from './slices/floor';
+import messages, { setHeardBy, upsertMessages } from './slices/messages';
 import outbox from './slices/outbox';
 import playback, { finished, markMissed } from './slices/playback';
 import session, { advanceSeq, setName, setServerOffset } from './slices/session';
@@ -17,10 +17,10 @@ export const store = configureStore({
     floor,
     playback,
     outbox,
-    [channelApi.reducerPath]: channelApi.reducer,
+    messages,
   },
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware({ serializableCheck: false, immutableCheck: false }).prepend(listener.middleware).concat(channelApi.middleware),
+    getDefaultMiddleware({ serializableCheck: false, immutableCheck: false }).prepend(listener.middleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;
@@ -42,4 +42,17 @@ listener.startListening({
 listener.startListening({
   matcher: isAnyOf(markMissed, finished),
   effect: (_, api) => keyValueStore.set('missed', (api.getState() as RootState).playback.missed),
+});
+
+listener.startListening({
+  actionCreator: upsertMessages,
+  effect: (action) => messageCache.upsert(action.payload),
+});
+
+listener.startListening({
+  actionCreator: setHeardBy,
+  effect: (action, api) => {
+    const message = (api.getState() as RootState).messages.list.find((existing) => existing.id === action.payload.messageId);
+    if (message) messageCache.upsert([message]);
+  },
 });
