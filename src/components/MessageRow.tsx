@@ -1,6 +1,6 @@
 import { AudioLines, Check, Mic, Pause, Play, Trash2 } from 'lucide-react-native';
-import { memo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { memo, useEffect, useRef, useState } from 'react';
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Row } from '@/store/selectors';
 import { colors, fonts, HIT, radii, tracking, type } from '@/theme/tokens';
 import { clock, duration, sentAgo } from '@/utils/format';
@@ -9,6 +9,7 @@ export interface RowPlayState {
   playing: boolean;
   current: boolean; // this row is the one loaded in the player
   positionMs: number;
+  durationMs: number; // length of the decoded audio actually playing
   next: boolean; // next in the auto-play queue
 }
 
@@ -30,10 +31,49 @@ function YouChip() {
   );
 }
 
-function LengthPill({ ms }: { ms: number }) {
+/**
+ * Clip length; while loaded in the player it doubles as the progress bar.
+ * The fill runs as one native animation timed to the remaining audio, so it
+ * lands on 100% exactly as playback ends. Progress ticks (every 100ms) only
+ * resync it on start, pause and resume.
+ */
+function LengthPill({ ms, play }: { ms: number; play?: RowPlayState }) {
   const d = duration(ms);
+  const [t] = useState(() => new Animated.Value(0));
+  const active = !!play;
+  const playing = !!play?.playing;
+  const total = play?.durationMs || ms;
+  const position = useRef(0);
+
+  useEffect(() => {
+    position.current = play?.positionMs ?? 0;
+  });
+
+  useEffect(() => {
+    if (!active || total <= 0) {
+      t.setValue(0);
+      return;
+    }
+    const from = Math.min(1, position.current / total);
+    t.setValue(from);
+    if (!playing) return;
+    const anim = Animated.timing(t, {
+      toValue: 1,
+      duration: Math.max(0, total * (1 - from)),
+      easing: Easing.linear,
+      useNativeDriver: true,
+    });
+    anim.start();
+    return () => anim.stop();
+  }, [active, playing, total, t]);
+
   return (
-    <View style={styles.length} accessible accessibilityLabel={`Length ${d}`}>
+    <View
+      style={[styles.length, active && styles.lengthActive]}
+      accessible
+      accessibilityLabel={active ? `Length ${d}, ${duration(play.positionMs)} played` : `Length ${d}`}
+    >
+      {active && <Animated.View style={[styles.lengthFill, { transform: [{ scaleX: t }] }]} />}
       <AudioLines size={12} color={colors.ink} strokeWidth={2.4} />
       <Text style={[type.pill, { color: colors.ink }]}>{d}</Text>
     </View>
@@ -94,27 +134,6 @@ function MessageRowImpl({ row, play, now, onPlay, onDelete, onRetry }: Props) {
     );
   }
 
-  // Currently playing: green dot, PLAYING, position, pause, progress (07).
-  if (play.current) {
-    const pct = row.durationMs > 0 ? (play.positionMs / row.durationMs) * 100 : 0;
-    return (
-      <View style={[styles.stack, styles.playingStack]}>
-        <View style={styles.row0}>
-          <View style={styles.lead}>
-            <View style={styles.greenDot} />
-            {row.mine ? <YouChip /> : <Text style={[type.rowStrong, { color: colors.ink }]}>{row.name}</Text>}
-            <Text style={[styles.tagCaps, { color: colors.backText }]}>{play.playing ? 'PLAYING' : 'PAUSED'}</Text>
-          </View>
-          <Text style={[type.row, styles.tabular, { color: colors.ink }]}>
-            {duration(play.positionMs)} / {duration(row.durationMs)}
-          </Text>
-          <PlayButton playing={play.playing} onPress={() => onPlay(row.id)} label={a11yWho} />
-        </View>
-        <Bar pct={pct} track={colors.n300} fill={colors.live} />
-      </View>
-    );
-  }
-
   let meta: React.ReactNode;
   switch (row.receipt.kind) {
     case 'time':
@@ -152,7 +171,7 @@ function MessageRowImpl({ row, play, now, onPlay, onDelete, onRetry }: Props) {
       <View style={styles.lead}>
         {who}
         {row.missed && <Tag text="MISSED" bg={colors.offlineBg} fg={colors.offline} caps />}
-        <LengthPill ms={row.durationMs} />
+        <LengthPill ms={row.durationMs} play={play.current ? play : undefined} />
         {row.late && <Tag text={sentAgo(row.at, now)} bg={colors.n200} fg={colors.n700} />}
         {row.cutShort && <Tag text="Cut short" bg={colors.n200} fg={colors.n700} />}
       </View>
@@ -168,7 +187,7 @@ function MessageRowImpl({ row, play, now, onPlay, onDelete, onRetry }: Props) {
           <Trash2 size={16} color={colors.offline} strokeWidth={2} />
         </Pressable>
       )}
-      <PlayButton playing={false} onPress={() => onPlay(row.id)} label={a11yWho} />
+      <PlayButton playing={play.playing} onPress={() => onPlay(row.id)} label={a11yWho} />
     </View>
   );
 }
@@ -193,7 +212,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.n300,
   },
-  playingStack: { gap: 8, paddingTop: 6, paddingRight: 6, paddingBottom: 12 },
   stackHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   you: {
     flexDirection: 'row',
@@ -214,13 +232,23 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     borderWidth: 1.5,
     borderColor: colors.n300,
+    overflow: 'hidden',
+  },
+  lengthActive: { borderColor: colors.live },
+  lengthFill: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    transformOrigin: 'left',
+    backgroundColor: colors.live,
   },
   tag: { paddingVertical: 3, paddingHorizontal: 8, borderRadius: radii.pill },
   tagCaps: { fontFamily: fonts.w600, fontSize: 11, letterSpacing: tracking(0.08, 11) },
   meta: { ...type.row, color: colors.n700, fontVariant: ['tabular-nums'] },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   tabular: { fontVariant: ['tabular-nums'] },
-  greenDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.live },
   // 36px visual, padded to a 44px hit area by the row padding + hitSlop
   play: {
     width: 36,

@@ -10,25 +10,23 @@ interface Status {
   halo: string;
   haloWidth: number;
   text: string;
-  pulse: boolean;
 }
 
 const STATUS: Record<Net, Status> = {
-  online: { label: 'Online', dot: colors.live, halo: colors.liveHalo, haloWidth: 4, text: colors.ink, pulse: true },
-  recovering: { label: 'Online', dot: colors.live, halo: colors.liveHalo, haloWidth: 4, text: colors.ink, pulse: true },
-  weak: { label: 'Weak', dot: colors.weakDot, halo: colors.weakBg, haloWidth: 3, text: colors.weakText, pulse: false },
-  offline: { label: 'Offline', dot: colors.offline, halo: colors.offlineBg, haloWidth: 4, text: colors.n700, pulse: false },
+  online: { label: 'Online', dot: colors.live, halo: colors.liveHalo, haloWidth: 4, text: colors.ink },
+  recovering: { label: 'Online', dot: colors.live, halo: colors.liveHalo, haloWidth: 4, text: colors.ink },
+  weak: { label: 'Weak', dot: colors.weakDot, halo: colors.weakBg, haloWidth: 3, text: colors.weakText },
+  offline: { label: 'Offline', dot: colors.offline, halo: colors.offlineBg, haloWidth: 4, text: colors.n700 },
 };
 
 const DOT = 8;
 const PULSE_MS = 1800;
 
-/** 8px status dot with its halo; when live, a ring ripples out from it. */
-function StatusDot({ dot, halo, haloWidth, pulse }: Status) {
+/** 8px status dot with its halo and a ring rippling out from it. */
+function StatusDot({ dot, halo, haloWidth }: Status) {
   const [t] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
-    if (!pulse) return;
     let loop: Animated.CompositeAnimation | null = null;
     let cancelled = false;
     AccessibilityInfo.isReduceMotionEnabled()
@@ -45,25 +43,23 @@ function StatusDot({ dot, halo, haloWidth, pulse }: Status) {
       loop?.stop();
       t.setValue(0);
     };
-  }, [pulse, t]);
+  }, [t]);
 
   const haloSize = DOT + haloWidth * 2;
   return (
     <View style={styles.dotBox}>
       <View style={[styles.circle, { width: haloSize, height: haloSize, borderRadius: haloSize / 2, backgroundColor: halo }]} />
-      {pulse && (
-        <Animated.View
-          style={[
-            styles.circle,
-            styles.dot,
-            {
-              backgroundColor: dot,
-              opacity: t.interpolate({ inputRange: [0, 1], outputRange: [0.45, 0] }),
-              transform: [{ scale: t.interpolate({ inputRange: [0, 1], outputRange: [1, 3.2] }) }],
-            },
-          ]}
-        />
-      )}
+      <Animated.View
+        style={[
+          styles.circle,
+          styles.dot,
+          {
+            backgroundColor: dot,
+            opacity: t.interpolate({ inputRange: [0, 1], outputRange: [0.45, 0] }),
+            transform: [{ scale: t.interpolate({ inputRange: [0, 1], outputRange: [1, 3.2] }) }],
+          },
+        ]}
+      />
       <View style={[styles.circle, styles.dot, { backgroundColor: dot }]} />
     </View>
   );

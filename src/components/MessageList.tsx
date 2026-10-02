@@ -18,6 +18,11 @@ export function MessageList() {
   const [retryClip] = useRetryClipMutation();
   const now = useNow(rows.some((r) => r.late), 30_000);
   const list = useRef<FlatList<Row>>(null);
+  // Follow the end like a chat: content growth keeps the list pinned only
+  // while the user is already at the bottom, or when a new message arrives.
+  // Scrolled up to replay an older clip, nothing yanks the view away.
+  const atBottom = useRef(true);
+  const pinnedFor = useRef(0);
 
   const onPlay = useCallback((id: string) => controller.togglePlay(id), [controller]);
   const onDelete = useCallback((id: string) => void deleteQueued(id), [deleteQueued]);
@@ -46,7 +51,16 @@ export function MessageList() {
       style={styles.list}
       contentContainerStyle={styles.content}
       ListHeaderComponent={<Text style={[type.caps, styles.section]}>This shift · recorded</Text>}
-      onContentSizeChange={() => list.current?.scrollToEnd({ animated: false })}
+      onScroll={(e) => {
+        const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+        atBottom.current = contentSize.height - contentOffset.y - layoutMeasurement.height < 24;
+      }}
+      scrollEventThrottle={64}
+      onContentSizeChange={() => {
+        if (!atBottom.current && pinnedFor.current === rows.length) return;
+        pinnedFor.current = rows.length;
+        list.current?.scrollToEnd({ animated: false });
+      }}
       renderItem={({ item }) => (
         <MessageRow
           row={item}
@@ -55,6 +69,7 @@ export function MessageList() {
             current: pb.current?.msgId === item.id,
             playing: pb.current?.msgId === item.id && pb.current.playing,
             positionMs: pb.current?.msgId === item.id ? pb.current.positionMs : 0,
+            durationMs: pb.current?.msgId === item.id ? pb.current.durationMs : 0,
             next: nextId === item.id,
           }}
           onPlay={onPlay}
