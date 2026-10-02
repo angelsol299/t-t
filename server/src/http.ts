@@ -1,14 +1,138 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { ClipComplete } from '../../shared/protocol.ts';
-import type { Channel } from './channel.ts';
-import { isClipId, type ClipStore } from './clips.ts';
-import type { Db } from './db.ts';
+import type { Clients } from './clients.ts';
+import { isClipId } from './clips.ts';
+import type { Messages } from './messages.ts';
 
-const MAX_BODY = 256 * 1024;
+// The HTTP API: the resumable upload and history. Every recorded clip is
+// finished through here, whether or not it was also streamed live.
 
-function json(response: ServerResponse, status: number, body: unknown) {
-  response.writeHead(status, { 'content-type': 'application/json' });
-  response.end(JSON.stringify(body));
+const MAXIMUM_BODY_BYTES = 256 * 1024;
+const MAXIMUM_CHUNK_INDEX = 10_000;
+
+interface RequestContext {
+  request: IncomingMessage;
+  url: URL;
+  routeParameters: Record<string, string>; // the :named parts of the route path
+  clientId: string;
+  clientName: string;
+}
+
+type Reply = { status: number; json: unknown } | { status: number; audio: Buffer };
+
+interface Route {
+  method: string;
+  path: string;
+  handle(context: RequestContext): Promise<Reply> | Reply;
+}
+
+const ok = (json: unknown): Reply => ({ status: 200, json });
+const error = (status: number, message: string): Reply => ({ status, json: { error: message } });
+
+export function createHttpHandler(messages: Messages, clients: Clients) {
+  const routes: Route[] = [
+    {
+      method: 'GET',
+      path: '/health',
+      handle: () => ok({ ok: true, online: clients.online() }),
+    },
+    {
+      method: 'GET',
+      path: '/messages',
+      handle: ({ url }) => {
+        const since = Number(url.searchParams.get('since') ?? 0);
+        return ok({ messages: messages.since(Number.isFinite(since) ? since : 0) });
+      },
+    },
+    {
+      // Which chunks have arrived, so an upload can resume.
+      method: 'GET',
+      path: '/clips/:id',
+      handle: ({ routeParameters }) => ok(messages.uploadStatus(routeParameters.id)),
+    },
+    {
+      // One chunk. Idempotent: sending it twice is harmless.
+      method: 'PUT',
+      path: '/clips/:id/chunks/:chunkIndex',
+      handle: async ({ request, routeParameters }) => {
+        const chunkIndex = Number(routeParameters.chunkIndex);
+        if (!Number.isInteger(chunkIndex) || chunkIndex < 0 || chunkIndex > MAXIMUM_CHUNK_INDEX) {
+          return error(400, 'bad chunk index');
+        }
+        messages.saveChunk(routeParameters.id, chunkIndex, new Uint8Array(await readBody(request)));
+        return ok({ ok: true });
+      },
+    },
+    {
+      // Commit once every chunk is present; 409 lists the ones still missing.
+      method: 'POST',
+      path: '/clips/:id/complete',
+      handle: async ({ request, routeParameters, clientId, clientName }) => {
+        if (!clientId) return error(400, 'missing x-client-id');
+        const completion = JSON.parse((await readBody(request)).toString()) as ClipComplete;
+        if (!Number.isInteger(completion.total) || completion.total < 1) return error(400, 'bad total');
+        const result = messages.commit(routeParameters.id, { clientId, name: clientName }, completion);
+        return 'missing' in result ? { status: 409, json: result } : ok(result);
+      },
+    },
+    {
+      // The assembled µ-law clip, for playback.
+      method: 'GET',
+      path: '/clips/:id/audio',
+      handle: ({ routeParameters }) => {
+        const audio = messages.wholeClip(routeParameters.id);
+        return audio ? { status: 200, audio } : error(404, 'not committed');
+      },
+    },
+  ];
+
+  return async (request: IncomingMessage, response: ServerResponse) => {
+    try {
+      const url = new URL(request.url ?? '/', 'http://localhost');
+      const found = findRoute(routes, request.method ?? 'GET', url.pathname);
+      if (!found) return send(response, error(404, 'not found'));
+      const reply = await found.route.handle({
+        request,
+        url,
+        routeParameters: found.routeParameters,
+        clientId: String(request.headers['x-client-id'] ?? ''),
+        clientName: decodeURIComponent(String(request.headers['x-client-name'] ?? 'Unknown')),
+      });
+      send(response, reply);
+    } catch (caught) {
+      send(response, error(400, String(caught)));
+    }
+  };
+}
+
+/** Matches "/clips/:id/chunks/:chunkIndex"-style paths. A clip id must look like a UUID. */
+function findRoute(routes: Route[], method: string, pathname: string) {
+  const actual = pathname.split('/').filter(Boolean);
+  for (const route of routes) {
+    if (route.method !== method) continue;
+    const expected = route.path.split('/').filter(Boolean);
+    if (expected.length !== actual.length) continue;
+    const routeParameters: Record<string, string> = {};
+    const matches = expected.every((part, index) => {
+      if (!part.startsWith(':')) return part === actual[index];
+      routeParameters[part.slice(1)] = actual[index];
+      return true;
+    });
+    if (!matches) continue;
+    if (routeParameters.id !== undefined && !isClipId(routeParameters.id)) return null;
+    return { route, routeParameters };
+  }
+  return null;
+}
+
+function send(response: ServerResponse, reply: Reply) {
+  if ('audio' in reply) {
+    response.writeHead(reply.status, { 'content-type': 'audio/basic', 'content-length': reply.audio.length });
+    response.end(reply.audio);
+    return;
+  }
+  response.writeHead(reply.status, { 'content-type': 'application/json' });
+  response.end(JSON.stringify(reply.json));
 }
 
 function readBody(request: IncomingMessage): Promise<Buffer> {
@@ -17,7 +141,7 @@ function readBody(request: IncomingMessage): Promise<Buffer> {
     let size = 0;
     request.on('data', (chunk: Buffer) => {
       size += chunk.length;
-      if (size > MAX_BODY) {
+      if (size > MAXIMUM_BODY_BYTES) {
         reject(new Error('too large'));
         request.destroy();
         return;
@@ -27,61 +151,4 @@ function readBody(request: IncomingMessage): Promise<Buffer> {
     request.on('end', () => resolve(Buffer.concat(parts)));
     request.on('error', reject);
   });
-}
-
-export function createHttpHandler(db: Db, clips: ClipStore, channel: Channel) {
-  return async (request: IncomingMessage, response: ServerResponse) => {
-    try {
-      const url = new URL(request.url ?? '/', 'http://x');
-      const parts = url.pathname.split('/').filter(Boolean);
-      const clientId = String(request.headers['x-client-id'] ?? '');
-      const clientName = decodeURIComponent(String(request.headers['x-client-name'] ?? 'Unknown'));
-
-      if (request.method === 'GET' && url.pathname === '/health') return json(response, 200, { ok: true, online: channel.online() });
-
-      if (request.method === 'GET' && url.pathname === '/messages') {
-        const since = Number(url.searchParams.get('since') ?? 0);
-        return json(response, 200, { messages: db.since(Number.isFinite(since) ? since : 0) });
-      }
-
-      if (parts[0] !== 'clips' || !parts[1] || !isClipId(parts[1])) return json(response, 404, { error: 'not found' });
-      const id = parts[1];
-
-      // PUT /clips/:id/chunks/:seq — idempotent
-      if (request.method === 'PUT' && parts[2] === 'chunks' && parts[3] !== undefined) {
-        const seq = Number(parts[3]);
-        if (!Number.isInteger(seq) || seq < 0 || seq > 10_000) return json(response, 400, { error: 'bad seq' });
-        const body = await readBody(request);
-        channel.recordChunk(id, seq, new Uint8Array(body));
-        return json(response, 200, { ok: true });
-      }
-
-      // GET /clips/:id — which chunks have arrived (for resume)
-      if (request.method === 'GET' && parts.length === 2) {
-        return json(response, 200, { received: clips.received(id), committed: db.get(id) !== null });
-      }
-
-      // POST /clips/:id/complete — commit once every chunk is present
-      if (request.method === 'POST' && parts[2] === 'complete') {
-        if (!clientId) return json(response, 400, { error: 'missing x-client-id' });
-        const info = JSON.parse((await readBody(request)).toString()) as ClipComplete;
-        if (!Number.isInteger(info.total) || info.total < 1) return json(response, 400, { error: 'bad total' });
-        const result = channel.commit(id, clientId, clientName, info);
-        if ('missing' in result) return json(response, 409, result);
-        return json(response, 200, result);
-      }
-
-      // GET /clips/:id/audio — the assembled µ-law clip
-      if (request.method === 'GET' && parts[2] === 'audio') {
-        const audio = clips.audio(id);
-        if (!audio) return json(response, 404, { error: 'not committed' });
-        response.writeHead(200, { 'content-type': 'audio/basic', 'content-length': audio.length });
-        return response.end(audio);
-      }
-
-      return json(response, 404, { error: 'not found' });
-    } catch (error) {
-      return json(response, 400, { error: String(error) });
-    }
-  };
 }

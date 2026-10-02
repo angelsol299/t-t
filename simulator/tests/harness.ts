@@ -16,7 +16,7 @@ export const SERVER_DIRECT_URL = `http://localhost:${SERVER_PORT}`;
 
 let server: ReturnType<typeof createServer> | null = null;
 let toxiproxyProcess: ChildProcess | null = null;
-let dataDir = '';
+let dataDirectory = '';
 const bots: Bot[] = [];
 let nextPort = 14_001;
 
@@ -31,8 +31,8 @@ export async function until(condition: () => boolean, ms = 10_000, description =
 }
 
 export async function start() {
-  dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'teton-test-'));
-  server = createServer({ port: SERVER_PORT, dataDir, quiet: true });
+  dataDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'teton-test-'));
+  server = createServer({ port: SERVER_PORT, dataDirectory, quiet: true });
   await server.ready;
   if (!(await TOXIPROXY.ping())) {
     let spawnError: Error | null = null;
@@ -52,7 +52,7 @@ export async function stop() {
   bots.length = 0;
   await server?.close();
   toxiproxyProcess?.kill();
-  fs.rmSync(dataDir, { recursive: true, force: true });
+  fs.rmSync(dataDirectory, { recursive: true, force: true });
 }
 
 /** A connected bot with its own Toxiproxy link, returned with that proxy's name. */

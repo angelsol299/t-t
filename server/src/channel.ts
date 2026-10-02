@@ -1,203 +1,113 @@
-import type { WebSocket } from 'ws';
-import {
-  FLOOR_LEASE_MS,
-  SAMPLE_RATE,
-  decodeChunkFrame,
-  type ChannelMessage,
-  type ClientMessage,
-  type ClipComplete,
-  type FloorFreeReason,
-  type ServerMessage,
-  type Speaker,
-} from '../../shared/protocol.ts';
-import type { ClipStore } from './clips.ts';
-import type { Db } from './db.ts';
+import type { RawData, WebSocket } from 'ws';
+import { decodeChunkFrame, type ClientMessage } from '../../shared/protocol.ts';
+import type { Client, Clients } from './clients.ts';
+import { createFloor } from './floor.ts';
+import type { Messages } from './messages.ts';
 
-const HISTORY_MS = 12 * 60 * 60 * 1000; // first join sees the current shift
-const MAX_CHUNK_BYTES = 64 * 1024;
+// The WebSocket side of the protocol. Each client message type has one handler
+// below. Handlers delegate to `clients` (who is here), `floor` (who may talk)
+// and `messages` (how audio becomes a message).
 
-interface Client {
-  ws: WebSocket;
-  clientId: string;
-  name: string;
-}
+const MAXIMUM_CHUNK_BYTES = 64 * 1024;
+const MAXIMUM_NAME_LENGTH = 40;
 
-export type CommitResult = { message: ChannelMessage } | { missing: number[] };
+type MessageOf<T extends ClientMessage['type']> = Extract<ClientMessage, { type: T }>;
 
-export function createChannel(db: Db, clips: ClipStore, log: (...args: unknown[]) => void) {
-  const clients = new Map<WebSocket, Client>();
-  let floor: (Speaker & { lastDataAt: number }) | null = null;
-  // Per-clip set of chunk seqs seen this process, used for contiguous acks.
-  const seen = new Map<string, { set: Set<number>; upTo: number }>();
+export function createChannel(clients: Clients, messages: Messages, log: (...details: unknown[]) => void) {
+  const floor = createFloor((previousHolder, reason) => {
+    log(`floor free (${reason}) ${previousHolder.name}`);
+    clients.broadcast({ type: 'floor_free', clipId: previousHolder.clipId, reason });
+  });
 
-  const send = (clientSocket: WebSocket, message: ServerMessage) => {
-    if (clientSocket.readyState === clientSocket.OPEN) clientSocket.send(JSON.stringify(message));
-  };
-  const broadcast = (message: ServerMessage, except?: WebSocket) => {
-    const data = JSON.stringify(message);
-    for (const [clientSocket] of clients) if (clientSocket !== except && clientSocket.readyState === clientSocket.OPEN) clientSocket.send(data);
-  };
-  const onlineCount = () => new Set([...clients.values()].map((client) => client.clientId)).size;
-  const publicFloor = (): Speaker | null =>
-    floor && { clientId: floor.clientId, name: floor.name, clipId: floor.clipId, startedAt: floor.startedAt };
+  function onHello(socket: WebSocket, hello: MessageOf<'hello'>) {
+    // A reconnect can arrive before the old socket's close event: drop the old socket.
+    const staleClients = clients.removeOtherSockets(hello.clientId, socket);
+    for (const stale of staleClients) stale.socket.terminate();
+    if (staleClients.length > 0) floor.freeIfHeldBy(hello.clientId);
 
-  function freeFloor(reason: FloorFreeReason) {
-    if (!floor) return;
-    const clipId = floor.clipId;
-    log(`floor free (${reason}) ${floor.name}`);
-    floor = null;
-    broadcast({ type: 'floor_free', clipId, reason });
+    clients.add({ socket, clientId: hello.clientId, name: hello.name.slice(0, MAXIMUM_NAME_LENGTH) });
+    const missed = messages.catchUp(hello.lastSeq); // lastSeq: the last message sequence number this client saw
+    clients.send(socket, { type: 'welcome', online: clients.online(), floor: floor.current(), serverTime: Date.now(), missed });
+    clients.broadcast({ type: 'presence', online: clients.online() }, socket);
+    log(`hello ${hello.name} (lastSeq ${hello.lastSeq}, ${missed.length} to catch up)`);
   }
 
-  function recordChunk(clipId: string, seq: number, payload: Uint8Array): number {
-    clips.putChunk(clipId, seq, payload);
-    let seenChunks = seen.get(clipId);
-    if (!seenChunks) {
-      // Seed from disk so acks stay correct after a server restart.
-      seenChunks = { set: new Set(clips.received(clipId)), upTo: -1 };
-      seen.set(clipId, seenChunks);
+  function onFloorRequest(client: Client, request: MessageOf<'floor_request'>) {
+    const result = floor.request(client, request.clipId);
+    if (!result.granted) {
+      clients.send(client.socket, { type: 'floor_denied', clipId: request.clipId, speaker: result.holder });
+      log(`floor denied ${client.name} (held by ${result.holder.name})`);
+      return;
     }
-    seenChunks.set.add(seq);
-    while (seenChunks.set.has(seenChunks.upTo + 1)) seenChunks.upTo++;
-    return seenChunks.upTo;
+    clients.send(client.socket, { type: 'floor_granted', clipId: request.clipId });
+    clients.broadcast({ type: 'floor_taken', speaker: result.holder }, client.socket);
+    log(`floor granted ${client.name}`);
   }
 
-  /** The only way a message comes into existence. Idempotent per clip id. */
-  function commit(clipId: string, senderId: string, senderName: string, info: ClipComplete): CommitResult {
-    const existing = db.get(clipId);
-    if (existing) return { message: existing };
-    const missing = clips.missing(clipId, info.total);
-    if (missing.length > 0) return { missing };
-    const bytes = clips.assemble(clipId, info.total);
-    const now = Date.now();
-    const { message, created } = db.commit({
-      id: clipId,
-      senderId,
-      senderName,
-      durationMs: Math.round((bytes / SAMPLE_RATE) * 1000),
-      recordedAt: Math.min(info.recordedAt, now),
-      committedAt: now,
-    });
-    seen.delete(clipId);
-    if (created) {
-      log(`commit #${message.seq} ${senderName} ${message.durationMs}ms${now - info.recordedAt > 30_000 ? ' (late)' : ''}`);
-      broadcast({ type: 'message', message });
-    }
-    return { message };
+  function onFloorRelease(client: Client, release: MessageOf<'floor_release'>) {
+    floor.release(release.clipId);
+    // total 0 means an accidental tap or a discarded clip: just free the floor.
+    if (release.total >= 1) messages.commit(release.clipId, client, release);
   }
 
-  function markHeard(messageId: string, clientId: string) {
-    const heardBy = db.markHeard(messageId, clientId);
-    if (heardBy !== null) broadcast({ type: 'receipt', messageId, heardBy });
+  function onAudioChunk(client: Client, frameBytes: Uint8Array) {
+    if (frameBytes.length > MAXIMUM_CHUNK_BYTES) return;
+    const frame = decodeChunkFrame(frameBytes);
+    if (!frame) return;
+    // In the protocol, `seq` is the chunk's index within its clip.
+    const highestContiguousChunk = messages.saveChunk(frame.clipId, frame.seq, frame.payload);
+    clients.send(client.socket, { type: 'chunk_ack', clipId: frame.clipId, upTo: highestContiguousChunk });
+    // Every chunk is saved for the full clip, but only the floor holder's
+    // audio is relayed live, so listeners never hear two people at once.
+    if (floor.renewLease(client.clientId, frame.clipId)) clients.relay(frameBytes, client.socket);
   }
 
-  function onText(clientSocket: WebSocket, rawText: string) {
+  function onClose(socket: WebSocket) {
+    const client = clients.remove(socket);
+    if (!client) return;
+    floor.freeIfHeldBy(client.clientId);
+    clients.broadcast({ type: 'presence', online: clients.online() });
+    log(`bye ${client.name}`);
+  }
+
+  function onText(socket: WebSocket, text: string) {
     let message: ClientMessage;
     try {
-      message = JSON.parse(rawText);
+      message = JSON.parse(text);
     } catch {
       return;
     }
-    if (message.type === 'hello') {
-      for (const [other, client] of clients) {
-        // A reconnect can beat the old socket's close; drop the stale one.
-        if (client.clientId === message.clientId && other !== clientSocket) {
-          clients.delete(other);
-          other.terminate();
-          if (floor?.clientId === message.clientId) freeFloor('disconnected');
-        }
-      }
-      clients.set(clientSocket, { ws: clientSocket, clientId: message.clientId, name: message.name.slice(0, 40) });
-      const missed = message.lastSeq > 0 ? db.since(message.lastSeq) : db.recent(Date.now() - HISTORY_MS);
-      send(clientSocket, { type: 'welcome', online: onlineCount(), floor: publicFloor(), serverTime: Date.now(), missed });
-      broadcast({ type: 'presence', online: onlineCount() }, clientSocket);
-      log(`hello ${message.name} (lastSeq ${message.lastSeq}, ${missed.length} to catch up)`);
-      return;
-    }
-    const me = clients.get(clientSocket);
-    if (!me) return;
+    if (message.type === 'hello') return onHello(socket, message);
+
+    const client = clients.get(socket);
+    if (!client) return; // everything else needs a hello first
     switch (message.type) {
       case 'ping':
-        send(clientSocket, { type: 'pong', sentAt: message.sentAt, serverTime: Date.now() });
-        break;
-      case 'floor_request': {
-        if (floor && floor.clientId !== me.clientId) {
-          send(clientSocket, { type: 'floor_denied', clipId: message.clipId, speaker: publicFloor()! });
-          log(`floor denied ${me.name} (held by ${floor.name})`);
-          break;
-        }
-        floor = {
-          clientId: me.clientId,
-          name: me.name,
-          clipId: message.clipId,
-          startedAt: Date.now(),
-          lastDataAt: Date.now(),
-        };
-        send(clientSocket, { type: 'floor_granted', clipId: message.clipId });
-        broadcast({ type: 'floor_taken', speaker: publicFloor()! }, clientSocket);
-        log(`floor granted ${me.name}`);
-        break;
-      }
-      case 'floor_release': {
-        if (floor?.clipId === message.clipId) freeFloor('released');
-        // total 0 = accidental tap or discarded clip: just free the floor.
-        if (message.total >= 1) commit(message.clipId, me.clientId, me.name, message);
-        break;
-      }
+        return clients.send(socket, { type: 'pong', sentAt: message.sentAt, serverTime: Date.now() });
+      case 'floor_request':
+        return onFloorRequest(client, message);
+      case 'floor_release':
+        return onFloorRelease(client, message);
       case 'played':
-        markHeard(message.messageId, me.clientId);
-        break;
+        return messages.markHeard(message.messageId, client.clientId);
     }
   }
 
-  function onBinary(clientSocket: WebSocket, data: Uint8Array) {
-    const me = clients.get(clientSocket);
-    if (!me || data.length > MAX_CHUNK_BYTES) return;
-    const frame = decodeChunkFrame(data);
-    if (!frame) return;
-    const upTo = recordChunk(frame.clipId, frame.seq, frame.payload);
-    send(clientSocket, { type: 'chunk_ack', clipId: frame.clipId, upTo });
-    // Only the floor holder is relayed live; anything else is stored for the
-    // full clip but not played, so listeners never hear two people at once.
-    if (floor && floor.clipId === frame.clipId && floor.clientId === me.clientId) {
-      floor.lastDataAt = Date.now();
-      for (const [other] of clients) if (other !== clientSocket && other.readyState === other.OPEN) other.send(data);
-    }
+  function onBinary(socket: WebSocket, data: RawData) {
+    const client = clients.get(socket);
+    if (!client) return;
+    const bytes = Array.isArray(data) ? Buffer.concat(data) : Buffer.from(data as ArrayBuffer);
+    onAudioChunk(client, new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength));
   }
-
-  const leaseTimer = setInterval(() => {
-    if (floor && Date.now() - floor.lastDataAt > FLOOR_LEASE_MS) freeFloor('lease_expired');
-  }, 250);
 
   return {
-    attach(clientSocket: WebSocket) {
-      clientSocket.on('message', (data, isBinary) => {
-        if (isBinary) {
-          const buf = Array.isArray(data) ? Buffer.concat(data) : Buffer.from(data as ArrayBuffer);
-          onBinary(clientSocket, new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength));
-        } else {
-          onText(clientSocket, data.toString());
-        }
-      });
-      clientSocket.on('close', () => {
-        const me = clients.get(clientSocket);
-        if (!me) return;
-        clients.delete(clientSocket);
-        if (floor?.clientId === me.clientId) freeFloor('disconnected');
-        broadcast({ type: 'presence', online: onlineCount() });
-        log(`bye ${me.name}`);
-      });
+    attach(socket: WebSocket) {
+      socket.on('message', (data, isBinary) => (isBinary ? onBinary(socket, data) : onText(socket, data.toString())));
+      socket.on('close', () => onClose(socket));
     },
-    commit,
-    recordChunk,
-    online: onlineCount,
-    markHeard,
-    broadcast,
     close() {
-      clearInterval(leaseTimer);
-      for (const [clientSocket] of clients) clientSocket.terminate();
+      floor.stop();
+      clients.closeAll();
     },
   };
 }
-
-export type Channel = ReturnType<typeof createChannel>;

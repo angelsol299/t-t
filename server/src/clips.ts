@@ -1,60 +1,75 @@
-import fs from 'node:fs';
+import fileSystem from 'node:fs';
 import path from 'node:path';
 
-// Chunks land on disk as data/clips/<clipId>/<seq>.ul, whether they arrived
-// over the live socket or through the resumable HTTP upload. Writing the same
-// chunk twice is harmless, which makes every upload path idempotent.
+// Audio files on disk. Each chunk is its own file, data/clips/<clipId>/<chunkIndex>.ul,
+// whether it arrived over the live socket or through the resumable HTTP upload.
+// Writing the same chunk twice is harmless, which makes every upload path safe
+// to retry. When a clip is committed, its chunks are joined into data/clips/<clipId>.ul.
 
-const ID_RE = /^[0-9a-f-]{36}$/i;
+const MULAW_FILE_EXTENSION = '.ul'; // raw µ-law audio, one byte per sample
+const CLIP_ID_PATTERN = /^[0-9a-f-]{36}$/i; // a UUID
 
-export function isClipId(id: string): boolean {
-  return ID_RE.test(id);
+/** Clip ids become folder names, so anything that isn't a UUID is rejected. */
+export function isClipId(clipId: string): boolean {
+  return CLIP_ID_PATTERN.test(clipId);
 }
 
-export function createClipStore(dataDir: string) {
-  const root = path.join(dataDir, 'clips');
-  fs.mkdirSync(root, { recursive: true });
+export function createClipStore(dataDirectory: string) {
+  const clipsDirectory = path.join(dataDirectory, 'clips');
+  fileSystem.mkdirSync(clipsDirectory, { recursive: true });
 
-  const directory = (id: string) => path.join(root, id);
-  const assembled = (id: string) => path.join(root, `${id}.ul`);
+  const chunksDirectory = (clipId: string) => path.join(clipsDirectory, clipId);
+  const chunkFile = (clipId: string, chunkIndex: number) =>
+    path.join(chunksDirectory(clipId), `${chunkIndex}${MULAW_FILE_EXTENSION}`);
+  const wholeClipFile = (clipId: string) => path.join(clipsDirectory, `${clipId}${MULAW_FILE_EXTENSION}`);
+
+  /** Indexes of the chunks on disk, in ascending order. */
+  function receivedChunks(clipId: string): number[] {
+    if (!fileSystem.existsSync(chunksDirectory(clipId))) return [];
+    return fileSystem
+      .readdirSync(chunksDirectory(clipId))
+      .filter((fileName) => fileName.endsWith(MULAW_FILE_EXTENSION))
+      .map((fileName) => Number(fileName.slice(0, -MULAW_FILE_EXTENSION.length)))
+      .sort((first, second) => first - second);
+  }
 
   return {
-    putChunk(id: string, seq: number, bytes: Uint8Array) {
-      fs.mkdirSync(directory(id), { recursive: true });
-      const target = path.join(directory(id), `${seq}.ul`);
-      const tempPath = `${target}.tmp`;
-      fs.writeFileSync(tempPath, bytes);
-      fs.renameSync(tempPath, target); // atomic: a half-written chunk never counts as received
+    saveChunk(clipId: string, chunkIndex: number, audio: Uint8Array) {
+      fileSystem.mkdirSync(chunksDirectory(clipId), { recursive: true });
+      const finalPath = chunkFile(clipId, chunkIndex);
+      const temporaryPath = `${finalPath}.tmp`;
+      fileSystem.writeFileSync(temporaryPath, audio);
+      // Renaming is atomic, so a half-written chunk never counts as received.
+      fileSystem.renameSync(temporaryPath, finalPath);
     },
-    received(id: string): number[] {
-      if (!fs.existsSync(directory(id))) return [];
-      return fs
-        .readdirSync(directory(id))
-        .filter((file) => file.endsWith('.ul'))
-        .map((file) => Number(file.slice(0, -3)))
-        .sort((first, second) => first - second);
+    receivedChunks,
+    /** Indexes from 0 to totalChunks - 1 that are not on disk yet. */
+    missingChunks(clipId: string, totalChunks: number): number[] {
+      const received = new Set(receivedChunks(clipId));
+      const missing: number[] = [];
+      for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+        if (!received.has(chunkIndex)) missing.push(chunkIndex);
+      }
+      return missing;
     },
-    missing(id: string, total: number): number[] {
-      const have = new Set(this.received(id));
-      const output: number[] = [];
-      for (let seq = 0; seq < total; seq++) if (!have.has(seq)) output.push(seq);
-      return output;
+    /** Joins chunks 0 to totalChunks - 1 into one file and returns its size in bytes. Check `missingChunks` first. */
+    joinChunks(clipId: string, totalChunks: number): number {
+      const chunks: Buffer[] = [];
+      for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+        chunks.push(fileSystem.readFileSync(chunkFile(clipId, chunkIndex)));
+      }
+      const wholeClip = Buffer.concat(chunks);
+      fileSystem.writeFileSync(wholeClipFile(clipId), wholeClip);
+      return wholeClip.length;
     },
-    /** Concatenates chunks 0..total-1 into one file. Caller checks `missing` first. */
-    assemble(id: string, total: number): number {
-      const parts: Buffer[] = [];
-      for (let seq = 0; seq < total; seq++) parts.push(fs.readFileSync(path.join(directory(id), `${seq}.ul`)));
-      const all = Buffer.concat(parts);
-      fs.writeFileSync(assembled(id), all);
-      return all.length;
+    /** The joined clip, or null if it hasn't been committed. */
+    wholeClip(clipId: string): Buffer | null {
+      const file = wholeClipFile(clipId);
+      return fileSystem.existsSync(file) ? fileSystem.readFileSync(file) : null;
     },
-    audio(id: string): Buffer | null {
-      const file = assembled(id);
-      return fs.existsSync(file) ? fs.readFileSync(file) : null;
-    },
-    remove(id: string) {
-      fs.rmSync(directory(id), { recursive: true, force: true });
-      fs.rmSync(assembled(id), { force: true });
+    remove(clipId: string) {
+      fileSystem.rmSync(chunksDirectory(clipId), { recursive: true, force: true });
+      fileSystem.rmSync(wholeClipFile(clipId), { force: true });
     },
   };
 }

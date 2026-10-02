@@ -128,6 +128,6 @@ src/services/       controller (PTT, floor, playback), socket (heartbeat, backof
 src/audio/          recorder (mic → µ-law chunks), streamPlayer (live, jitter buffer), clipPlayer, tone
 src/store/          Redux Toolkit slices (incl. the message list), selectors (one receipt per row)
 shared/             protocol.ts, mulaw.ts, netMachine.ts
-server/src/         index (http + ws), channel (presence, floor + lease, relay, commit), http (upload API), db, clips
+server/src/         index (boot + wiring), channel (one handler per WS message), clients (presence), floor (floor + lease), messages (chunks → commit → receipts), http (route table), database, clips
 simulator/          cli + scenarios, bots + REPL, tests, samples/
 ```
