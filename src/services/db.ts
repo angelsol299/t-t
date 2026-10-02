@@ -1,4 +1,5 @@
 import { openDatabaseSync } from 'expo-sqlite';
+import Storage from 'expo-sqlite/kv-store';
 import type { ChannelMessage } from '@shared/protocol';
 
 // Local persistence. Everything that must survive an app kill lives here:
@@ -22,23 +23,23 @@ const db = openDatabaseSync('teton.db');
 
 db.execSync(`
   PRAGMA journal_mode = WAL;
-  CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL);
   CREATE TABLE IF NOT EXISTS messages (id TEXT PRIMARY KEY NOT NULL, seq INTEGER NOT NULL, json TEXT NOT NULL);
   CREATE TABLE IF NOT EXISTS outbox (id TEXT PRIMARY KEY NOT NULL, json TEXT NOT NULL);
 `);
 
+// Small JSON values (identity, last seq, clock offset) in Expo's built-in KV store.
 export const keyValueStore = {
   get<T>(key: string, fallback: T): T {
-    const row = db.getFirstSync<{ value: string }>('SELECT value FROM kv WHERE key = ?', key);
-    if (!row) return fallback;
+    const value = Storage.getItemSync(key);
+    if (value === null) return fallback;
     try {
-      return JSON.parse(row.value) as T;
+      return JSON.parse(value) as T;
     } catch {
       return fallback;
     }
   },
   set(key: string, value: unknown) {
-    db.runSync('INSERT OR REPLACE INTO kv (key, value) VALUES (?, ?)', key, JSON.stringify(value));
+    Storage.setItemSync(key, JSON.stringify(value));
   },
 };
 

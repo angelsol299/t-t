@@ -8,14 +8,13 @@ import { PttButton, type PttState } from '@/components/PttButton';
 import { BackOnlineBand, OfflineBand, WeakBand } from '@/components/StatusBand';
 import { TopBar } from '@/components/TopBar';
 import { CHANNEL_NAME } from '@/config';
-import { useController } from '@/hooks/useController';
+import { registry } from '@/services/registry';
 import { useAppSelector } from '@/store';
 import { selectSavedCount } from '@/store/selectors';
 import { colors } from '@/theme/tokens';
 
 /** 02–08: one screen; every state is driven by the store. */
 export default function Channel() {
-  const controller = useController();
   const connection = useAppSelector((state) => state.connection);
   const floor = useAppSelector((state) => state.floor);
   const offset = useAppSelector((state) => state.session.serverOffset);
@@ -55,15 +54,15 @@ export default function Channel() {
           since={connection.offlineSince}
           saved={saved}
           nextRetryAt={connection.nextRetryAt}
-          onRetry={() => controller.retryNow()}
+          onRetry={() => registry.controller?.retryNow()}
         />
       )}
       {connection.net === 'recovering' && (
-        <BackOnlineBand missed={connection.missedOnReturn ?? 0} onReplay={() => controller.replayAll()} />
+        <BackOnlineBand missed={connection.missedOnReturn ?? 0} onReplay={() => registry.controller?.replayAll()} />
       )}
       <MessageList />
       {floor.denied && floor.holding && <FloorDeniedCard name={floor.denied.name} />}
-      <PttButton state={ptt} onPressIn={() => controller.pressIn()} onPressOut={() => controller.pressOut()} />
+      <PttButton state={ptt} onPressIn={() => registry.controller?.pressIn()} onPressOut={() => registry.controller?.pressOut()} />
     </SafeAreaView>
   );
 }

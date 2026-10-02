@@ -1,33 +1,29 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
-import { useController } from '@/hooks/useController';
 import { useNow } from '@/hooks/useNow';
+import { registry } from '@/services/registry';
 import { useAppSelector } from '@/store';
 import { selectRows, type Row } from '@/store/selectors';
 import { colors, type } from '@/theme/tokens';
 import { MessageRow } from './MessageRow';
 
-// Newest at the bottom, like a chat: the list is pinned to the button.
+// Newest at the bottom, like a chat: an inverted list starts at the newest
+// row and stays put when you scroll up to replay an older clip.
 
 export function MessageList() {
   const rows = useAppSelector(selectRows);
   const playback = useAppSelector((state) => state.playback);
-  const controller = useController();
   const now = useNow(rows.some((row) => row.late), 30_000);
+  const newestFirst = useMemo(() => [...rows].reverse(), [rows]);
   const list = useRef<FlatList<Row>>(null);
-  // Follow the end like a chat: content growth keeps the list pinned only
-  // while the user is already at the bottom, or when a new message arrives.
-  // Scrolled up to replay an older clip, nothing yanks the view away.
-  const atBottom = useRef(true);
-  const pinnedFor = useRef(0);
 
-  const onPlay = useCallback((id: string) => controller.togglePlay(id), [controller]);
-  const onDelete = useCallback((id: string) => controller.deleteQueued(id), [controller]);
-  const onRetry = useCallback((id: string) => controller.retryClip(id), [controller]);
+  const onPlay = useCallback((id: string) => registry.controller?.togglePlay(id), []);
+  const onDelete = useCallback((id: string) => registry.controller?.deleteQueued(id), []);
+  const onRetry = useCallback((id: string) => registry.controller?.retryClip(id), []);
 
   useEffect(() => {
-    // Keep the newest message in view as rows arrive.
-    requestAnimationFrame(() => list.current?.scrollToEnd({ animated: true }));
+    // A new message brings the newest row back into view.
+    list.current?.scrollToOffset({ offset: 0, animated: true });
   }, [rows.length]);
 
   if (rows.length === 0) {
@@ -43,21 +39,12 @@ export function MessageList() {
   return (
     <FlatList
       ref={list}
-      data={rows}
+      inverted
+      data={newestFirst}
       keyExtractor={(row) => row.id}
       style={styles.list}
-      contentContainerStyle={styles.content}
-      ListHeaderComponent={<Text style={[type.caps, styles.section]}>This shift · recorded</Text>}
-      onScroll={(event) => {
-        const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
-        atBottom.current = contentSize.height - contentOffset.y - layoutMeasurement.height < 24;
-      }}
-      scrollEventThrottle={64}
-      onContentSizeChange={() => {
-        if (!atBottom.current && pinnedFor.current === rows.length) return;
-        pinnedFor.current = rows.length;
-        list.current?.scrollToEnd({ animated: false });
-      }}
+      // Inverted, so the footer sits above the oldest row.
+      ListFooterComponent={<Text style={[type.caps, styles.section]}>This shift · recorded</Text>}
       renderItem={({ item }) => (
         <MessageRow
           row={item}
@@ -80,7 +67,6 @@ export function MessageList() {
 
 const styles = StyleSheet.create({
   list: { flex: 1 },
-  content: { flexGrow: 1, justifyContent: 'flex-end' },
   section: { color: colors.neutral700, paddingHorizontal: 20, paddingBottom: 10 },
   empty: { flex: 1, justifyContent: 'flex-end', paddingHorizontal: 20, paddingBottom: 16 },
 });

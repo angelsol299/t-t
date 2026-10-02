@@ -169,10 +169,6 @@ export function createSocket(handlers: SocketHandlers) {
       socket.send(data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer);
       return true;
     },
-    /** Bytes queued in the socket but not yet on the wire: the backlog signal for "weak". */
-    get bufferedAmount() {
-      return socket?.bufferedAmount ?? 0;
-    },
   };
 }
 

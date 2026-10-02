@@ -44,13 +44,6 @@ export function decodeToFloat(bytes: Uint8Array): Float32Array<ArrayBuffer> {
   return output;
 }
 
-/** µ-law bytes → 16-bit PCM. */
-export function decodeToInt16(bytes: Uint8Array): Int16Array {
-  const output = new Int16Array(bytes.length);
-  for (let index = 0; index < bytes.length; index++) output[index] = DECODE_TABLE[bytes[index]];
-  return output;
-}
-
 /**
  * Resample float audio. Downsampling averages the source samples that fall in
  * each output slot (a cheap low-pass that keeps aliasing down for voice);

@@ -603,13 +603,6 @@ export function createController(store: Store) {
         controller.stopPlayback();
       outbox.discard(clipId);
     },
-    markPlayed: (messageId: string) =>
-      socket.send({ type: "played", messageId }),
-    async askMic() {
-      const micStarted = await micPermission(true);
-      dispatch(setMicDenied(!micStarted));
-      return micStarted;
-    },
   };
   registry.controller = controller;
   return controller;
