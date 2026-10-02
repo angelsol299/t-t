@@ -76,7 +76,7 @@ const HEADER = 1 + ID_LEN + 4;
 export function encodeChunkFrame(clipId: string, seq: number, payload: Uint8Array): Uint8Array {
   const out = new Uint8Array(HEADER + payload.length);
   out[0] = FRAME_AUDIO;
-  for (let i = 0; i < ID_LEN; i++) out[1 + i] = clipId.charCodeAt(i);
+  for (let index = 0; index < ID_LEN; index++) out[1 + index] = clipId.charCodeAt(index);
   new DataView(out.buffer).setUint32(1 + ID_LEN, seq, false);
   out.set(payload, HEADER);
   return out;
@@ -87,11 +87,11 @@ export function decodeChunkFrame(
 ): { clipId: string; seq: number; payload: Uint8Array } | null {
   if (data.length < HEADER || data[0] !== FRAME_AUDIO) return null;
   let clipId = '';
-  for (let i = 0; i < ID_LEN; i++) clipId += String.fromCharCode(data[1 + i]);
+  for (let index = 0; index < ID_LEN; index++) clipId += String.fromCharCode(data[1 + index]);
   const seq = new DataView(data.buffer, data.byteOffset, data.byteLength).getUint32(1 + ID_LEN, false);
   return { clipId, seq, payload: data.subarray(HEADER) };
 }
 
-export function isLate(m: Pick<ChannelMessage, 'recordedAt' | 'committedAt'>): boolean {
-  return m.committedAt - m.recordedAt > LATE_MS;
+export function isLate(message: Pick<ChannelMessage, 'recordedAt' | 'committedAt'>): boolean {
+  return message.committedAt - message.recordedAt > LATE_MS;
 }

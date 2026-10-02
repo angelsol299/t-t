@@ -46,23 +46,23 @@ export const messageCache = {
   load(): ChannelMessage[] {
     return db
       .getAllSync<{ json: string }>('SELECT json FROM messages ORDER BY seq ASC')
-      .map((r) => JSON.parse(r.json) as ChannelMessage);
+      .map((row) => JSON.parse(row.json) as ChannelMessage);
   },
   upsert(list: ChannelMessage[]) {
     if (list.length === 0) return;
     db.withTransactionSync(() => {
-      for (const m of list) {
-        db.runSync('INSERT OR REPLACE INTO messages (id, seq, json) VALUES (?, ?, ?)', m.id, m.seq, JSON.stringify(m));
+      for (const message of list) {
+        db.runSync('INSERT OR REPLACE INTO messages (id, seq, json) VALUES (?, ?, ?)', message.id, message.seq, JSON.stringify(message));
       }
     });
   },
   /** Keep the cache to the current shift. */
   prune(beforeMs: number) {
-    const keep = messageCache.load().filter((m) => m.committedAt >= beforeMs);
+    const keep = messageCache.load().filter((message) => message.committedAt >= beforeMs);
     db.withTransactionSync(() => {
       db.runSync('DELETE FROM messages');
-      for (const m of keep) {
-        db.runSync('INSERT INTO messages (id, seq, json) VALUES (?, ?, ?)', m.id, m.seq, JSON.stringify(m));
+      for (const message of keep) {
+        db.runSync('INSERT INTO messages (id, seq, json) VALUES (?, ?, ?)', message.id, message.seq, JSON.stringify(message));
       }
     });
   },
@@ -70,7 +70,7 @@ export const messageCache = {
 
 export const outboxStore = {
   load(): OutboxItem[] {
-    return db.getAllSync<{ json: string }>('SELECT json FROM outbox').map((r) => JSON.parse(r.json) as OutboxItem);
+    return db.getAllSync<{ json: string }>('SELECT json FROM outbox').map((row) => JSON.parse(row.json) as OutboxItem);
   },
   put(item: OutboxItem) {
     db.runSync('INSERT OR REPLACE INTO outbox (id, json) VALUES (?, ?)', item.clipId, JSON.stringify(item));

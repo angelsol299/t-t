@@ -31,37 +31,37 @@ const floor = createSlice({
   name: 'floor',
   initialState,
   reducers: {
-    setHolding(s, a: PayloadAction<boolean>) {
-      s.holding = a.payload;
-      if (!a.payload) s.denied = null;
+    setHolding(state, action: PayloadAction<boolean>) {
+      state.holding = action.payload;
+      if (!action.payload) state.denied = null;
     },
-    startMine(s, a: PayloadAction<{ clipId: string; startedAt: number; mode: TalkMode }>) {
-      s.my = a.payload;
-      s.denied = null;
-      s.notice = null;
+    startMine(state, action: PayloadAction<{ clipId: string; startedAt: number; mode: TalkMode }>) {
+      state.my = action.payload;
+      state.denied = null;
+      state.notice = null;
     },
-    setMyMode(s, a: PayloadAction<TalkMode>) {
-      if (s.my) s.my.mode = a.payload;
+    setMyMode(state, action: PayloadAction<TalkMode>) {
+      if (state.my) state.my.mode = action.payload;
     },
-    stopMine(s) {
-      s.my = null;
-      s.level = 0;
+    stopMine(state) {
+      state.my = null;
+      state.level = 0;
     },
-    setSpeaker(s, a: PayloadAction<Speaker | null>) {
-      s.speaker = a.payload;
-      if (!a.payload && !s.my) s.level = 0;
+    setSpeaker(state, action: PayloadAction<Speaker | null>) {
+      state.speaker = action.payload;
+      if (!action.payload && !state.my) state.level = 0;
     },
-    setDenied(s, a: PayloadAction<Speaker | null>) {
-      s.denied = a.payload;
+    setDenied(state, action: PayloadAction<Speaker | null>) {
+      state.denied = action.payload;
     },
-    setLevel(s, a: PayloadAction<number>) {
-      s.level = a.payload;
+    setLevel(state, action: PayloadAction<number>) {
+      state.level = action.payload;
     },
-    setNotice(s, a: PayloadAction<string | null>) {
-      s.notice = a.payload;
+    setNotice(state, action: PayloadAction<string | null>) {
+      state.notice = action.payload;
     },
-    setMicDenied(s, a: PayloadAction<boolean>) {
-      s.micDenied = a.payload;
+    setMicDenied(state, action: PayloadAction<boolean>) {
+      state.micDenied = action.payload;
     },
   },
 });

@@ -17,7 +17,7 @@ export interface ServerOptions {
 
 export function createServer({ port, dataDir, quiet }: ServerOptions) {
   fs.mkdirSync(dataDir, { recursive: true });
-  const log = quiet ? () => {} : (...a: unknown[]) => console.log(new Date().toISOString().slice(11, 19), ...a);
+  const log = quiet ? () => {} : (...args: unknown[]) => console.log(new Date().toISOString().slice(11, 19), ...args);
   const db = openDb(dataDir);
   const clips = createClipStore(dataDir);
   const channel = createChannel(db, clips, log);
@@ -47,7 +47,7 @@ export function createServer({ port, dataDir, quiet }: ServerOptions) {
       clearInterval(retention);
       channel.close();
       wss.close();
-      await new Promise((r) => server.close(r));
+      await new Promise((resolve) => server.close(resolve));
       db.close();
     },
   };
@@ -56,6 +56,6 @@ export function createServer({ port, dataDir, quiet }: ServerOptions) {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const port = Number(process.env.PORT ?? 3000);
   const dataDir = process.env.DATA_DIR ?? path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../data');
-  const s = createServer({ port, dataDir });
-  s.ready.then(() => console.log(`Teton Talk server on :${port} (data in ${dataDir})`));
+  const server = createServer({ port, dataDir });
+  server.ready.then(() => console.log(`Teton Talk server on :${port} (data in ${dataDir})`));
 }

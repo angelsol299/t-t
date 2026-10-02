@@ -12,22 +12,22 @@ export interface ScenarioCtx {
 
 const sleep = (ms: number, signal: AbortSignal) =>
   new Promise<void>((resolve) => {
-    const t = setTimeout(resolve, ms);
+    const timer = setTimeout(resolve, ms);
     signal.addEventListener('abort', () => {
-      clearTimeout(t);
+      clearTimeout(timer);
       resolve();
     });
   });
 
-async function each(ctx: ScenarioCtx, fn: (p: string) => Promise<void>) {
+async function each(ctx: ScenarioCtx, fn: (proxy: string) => Promise<void>) {
   await Promise.all(ctx.proxies.map(fn));
 }
 
 async function cut(ctx: ScenarioCtx, ms: number) {
   ctx.log(`✂  link down for ${(ms / 1000).toFixed(1)}s`);
-  await each(ctx, (p) => ctx.tp.enable(p, false));
+  await each(ctx, (proxy) => ctx.tp.enable(proxy, false));
   await sleep(ms, ctx.signal);
-  await each(ctx, (p) => ctx.tp.enable(p, true));
+  await each(ctx, (proxy) => ctx.tp.enable(proxy, true));
   ctx.log('✓  link up');
 }
 
@@ -39,10 +39,10 @@ export const scenarios: Record<string, { about: string; run(ctx: ScenarioCtx): P
   weak: {
     about: '600±400ms latency each way and ~6KB/s upstream (below the 8KB/s live stream): forces record-and-send.',
     async run(ctx) {
-      await each(ctx, async (p) => {
-        await ctx.tp.addToxic(p, { name: 'lat_down', type: 'latency', stream: 'downstream', attributes: { latency: 600, jitter: 400 } });
-        await ctx.tp.addToxic(p, { name: 'lat_up', type: 'latency', stream: 'upstream', attributes: { latency: 600, jitter: 400 } });
-        await ctx.tp.addToxic(p, { name: 'bw_up', type: 'bandwidth', stream: 'upstream', attributes: { rate: 6 } });
+      await each(ctx, async (proxy) => {
+        await ctx.tp.addToxic(proxy, { name: 'lat_down', type: 'latency', stream: 'downstream', attributes: { latency: 600, jitter: 400 } });
+        await ctx.tp.addToxic(proxy, { name: 'lat_up', type: 'latency', stream: 'upstream', attributes: { latency: 600, jitter: 400 } });
+        await ctx.tp.addToxic(proxy, { name: 'bw_up', type: 'bandwidth', stream: 'upstream', attributes: { rate: 6 } });
       });
     },
   },
@@ -65,7 +65,7 @@ export const scenarios: Record<string, { about: string; run(ctx: ScenarioCtx): P
   offline: {
     about: 'Link down until you run `sim good` (or press Ctrl-C).',
     async run(ctx) {
-      await each(ctx, (p) => ctx.tp.enable(p, false));
+      await each(ctx, (proxy) => ctx.tp.enable(proxy, false));
       ctx.log('✂  link down — run `npm run sim -- good` to restore');
     },
   },
@@ -82,17 +82,17 @@ export const scenarios: Record<string, { about: string; run(ctx: ScenarioCtx): P
   zombie: {
     about: 'Connections stay open but no data flows (captive wifi). Heartbeats must notice.',
     async run(ctx) {
-      await each(ctx, async (p) => {
-        await ctx.tp.addToxic(p, { name: 'zombie_down', type: 'timeout', stream: 'downstream', attributes: { timeout: 0 } });
-        await ctx.tp.addToxic(p, { name: 'zombie_up', type: 'timeout', stream: 'upstream', attributes: { timeout: 0 } });
+      await each(ctx, async (proxy) => {
+        await ctx.tp.addToxic(proxy, { name: 'zombie_down', type: 'timeout', stream: 'downstream', attributes: { timeout: 0 } });
+        await ctx.tp.addToxic(proxy, { name: 'zombie_up', type: 'timeout', stream: 'upstream', attributes: { timeout: 0 } });
       });
     },
   },
   reset: {
     about: 'Every connection is reset 1.5s after it opens: uploads must resume, not restart.',
     async run(ctx) {
-      await each(ctx, (p) =>
-        ctx.tp.addToxic(p, { name: 'reset', type: 'reset_peer', stream: 'upstream', attributes: { timeout: 1500 } }),
+      await each(ctx, (proxy) =>
+        ctx.tp.addToxic(proxy, { name: 'reset', type: 'reset_peer', stream: 'upstream', attributes: { timeout: 1500 } }),
       );
     },
   },

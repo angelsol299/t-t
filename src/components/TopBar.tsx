@@ -24,7 +24,7 @@ const PULSE_MS = 1800;
 
 /** 8px status dot with its halo and a ring rippling out from it. */
 function StatusDot({ dot, halo, haloWidth }: Status) {
-  const [t] = useState(() => new Animated.Value(0));
+  const [progress] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     let loop: Animated.CompositeAnimation | null = null;
@@ -34,16 +34,16 @@ function StatusDot({ dot, halo, haloWidth }: Status) {
       .then((reduce) => {
         if (reduce || cancelled) return;
         loop = Animated.loop(
-          Animated.timing(t, { toValue: 1, duration: PULSE_MS, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+          Animated.timing(progress, { toValue: 1, duration: PULSE_MS, easing: Easing.out(Easing.quad), useNativeDriver: true }),
         );
         loop.start();
       });
     return () => {
       cancelled = true;
       loop?.stop();
-      t.setValue(0);
+      progress.setValue(0);
     };
-  }, [t]);
+  }, [progress]);
 
   const haloSize = DOT + haloWidth * 2;
   return (
@@ -55,8 +55,8 @@ function StatusDot({ dot, halo, haloWidth }: Status) {
           styles.dot,
           {
             backgroundColor: dot,
-            opacity: t.interpolate({ inputRange: [0, 1], outputRange: [0.45, 0] }),
-            transform: [{ scale: t.interpolate({ inputRange: [0, 1], outputRange: [1, 3.2] }) }],
+            opacity: progress.interpolate({ inputRange: [0, 1], outputRange: [0.45, 0] }),
+            transform: [{ scale: progress.interpolate({ inputRange: [0, 1], outputRange: [1, 3.2] }) }],
           },
         ]}
       />

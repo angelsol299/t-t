@@ -7,7 +7,7 @@ const proxy = new Proxy({} as Controller, {
   get:
     (_, key: string) =>
     (...args: unknown[]) =>
-      (registry.controller as unknown as Record<string, (...a: unknown[]) => unknown> | null)?.[key]?.(...args),
+      (registry.controller as unknown as Record<string, (...methodArgs: unknown[]) => unknown> | null)?.[key]?.(...args),
 });
 
 export function useController(): Controller {

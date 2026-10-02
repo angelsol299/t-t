@@ -13,8 +13,8 @@ import { colors, fonts, radii, tracking, type } from '@/theme/tokens';
 /** 01: a name and a live preview of how others see you. */
 export default function Join() {
   const { edit } = useLocalSearchParams<{ edit?: string }>();
-  const saved = useAppSelector((s) => s.session.name);
-  const live = useAppSelector((s) => s.connection.online);
+  const saved = useAppSelector((state) => state.session.name);
+  const live = useAppSelector((state) => state.connection.online);
   const dispatch = useAppDispatch();
   const [name, setValue] = useState(edit ? (saved ?? '') : '');
   const [online, setOnline] = useState<number | null>(edit ? live : null);
@@ -23,8 +23,8 @@ export default function Join() {
   useEffect(() => {
     if (edit) return;
     fetch(`${SERVER_URL}/health`)
-      .then((r) => r.json())
-      .then((j: { online?: number }) => setOnline(j.online ?? null))
+      .then((response) => response.json())
+      .then((body: { online?: number }) => setOnline(body.online ?? null))
       .catch(() => {});
   }, [edit]);
 

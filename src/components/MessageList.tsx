@@ -12,11 +12,11 @@ import { MessageRow } from './MessageRow';
 
 export function MessageList() {
   const rows = useAppSelector(selectRows);
-  const pb = useAppSelector((s) => s.playback);
+  const pb = useAppSelector((state) => state.playback);
   const controller = useController();
   const [deleteQueued] = useDeleteQueuedMutation();
   const [retryClip] = useRetryClipMutation();
-  const now = useNow(rows.some((r) => r.late), 30_000);
+  const now = useNow(rows.some((row) => row.late), 30_000);
   const list = useRef<FlatList<Row>>(null);
   // Follow the end like a chat: content growth keeps the list pinned only
   // while the user is already at the bottom, or when a new message arrives.
@@ -47,12 +47,12 @@ export function MessageList() {
     <FlatList
       ref={list}
       data={rows}
-      keyExtractor={(r) => r.id}
+      keyExtractor={(row) => row.id}
       style={styles.list}
       contentContainerStyle={styles.content}
       ListHeaderComponent={<Text style={[type.caps, styles.section]}>This shift · recorded</Text>}
-      onScroll={(e) => {
-        const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+      onScroll={(event) => {
+        const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
         atBottom.current = contentSize.height - contentOffset.y - layoutMeasurement.height < 24;
       }}
       scrollEventThrottle={64}

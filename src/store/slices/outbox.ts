@@ -14,15 +14,15 @@ const outbox = createSlice({
   name: 'outbox',
   initialState: { items: {} } as OutboxState,
   reducers: {
-    upsert(s, a: PayloadAction<OutboxEntry>) {
-      s.items[a.payload.clipId] = a.payload;
+    upsert(state, action: PayloadAction<OutboxEntry>) {
+      state.items[action.payload.clipId] = action.payload;
     },
-    patch(s, a: PayloadAction<{ clipId: string } & Partial<OutboxEntry>>) {
-      const item = s.items[a.payload.clipId];
-      if (item) Object.assign(item, a.payload);
+    patch(state, action: PayloadAction<{ clipId: string } & Partial<OutboxEntry>>) {
+      const item = state.items[action.payload.clipId];
+      if (item) Object.assign(item, action.payload);
     },
-    remove(s, a: PayloadAction<string>) {
-      delete s.items[a.payload];
+    remove(state, action: PayloadAction<string>) {
+      delete state.items[action.payload];
     },
   },
 });

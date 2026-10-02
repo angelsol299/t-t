@@ -31,21 +31,21 @@ export const clipFiles = {
     if (!dir.exists) return [];
     return dir
       .list()
-      .filter((f): f is File => f instanceof File && f.name.endsWith('.ul'))
-      .map((f) => Number(f.name.slice(0, -3)))
-      .filter((n) => Number.isInteger(n))
-      .sort((a, b) => a - b);
+      .filter((entry): entry is File => entry instanceof File && entry.name.endsWith('.ul'))
+      .map((file) => Number(file.name.slice(0, -3)))
+      .filter((seq) => Number.isInteger(seq))
+      .sort((first, second) => first - second);
   },
   /** Whole clip, for local playback of a clip that is not on the server yet. */
   readAll(id: string): Uint8Array | null {
     const seqs = clipFiles.chunks(id);
     if (seqs.length === 0) return null;
-    const parts = seqs.map((s) => clipFiles.readChunk(id, s) ?? new Uint8Array(0));
-    const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
-    let o = 0;
-    for (const p of parts) {
-      out.set(p, o);
-      o += p.length;
+    const parts = seqs.map((seq) => clipFiles.readChunk(id, seq) ?? new Uint8Array(0));
+    const out = new Uint8Array(parts.reduce((total, part) => total + part.length, 0));
+    let offset = 0;
+    for (const part of parts) {
+      out.set(part, offset);
+      offset += part.length;
     }
     return out;
   },

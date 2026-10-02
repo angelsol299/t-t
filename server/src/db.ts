@@ -19,16 +19,16 @@ const SELECT = `
   SELECT m.*, (SELECT COUNT(*) FROM receipts r WHERE r.msg_id = m.id) AS heard_by
   FROM messages m`;
 
-function toMessage(r: MessageRow): ChannelMessage {
+function toMessage(row: MessageRow): ChannelMessage {
   return {
-    seq: r.seq,
-    id: r.id,
-    senderId: r.sender_id,
-    senderName: r.sender_name,
-    durationMs: r.duration_ms,
-    recordedAt: r.recorded_at,
-    committedAt: r.committed_at,
-    heardBy: r.heard_by,
+    seq: row.seq,
+    id: row.id,
+    senderId: row.sender_id,
+    senderName: row.sender_name,
+    durationMs: row.duration_ms,
+    recordedAt: row.recorded_at,
+    committedAt: row.committed_at,
+    heardBy: row.heard_by,
   };
 }
 
@@ -70,9 +70,9 @@ export function openDb(dataDir: string) {
 
   return {
     /** Inserts once; a second commit of the same clip id returns the existing row. */
-    commit(m: Omit<ChannelMessage, 'seq' | 'heardBy'>): { message: ChannelMessage; created: boolean } {
-      const res = insertMsg.run(m.id, m.senderId, m.senderName, m.durationMs, m.recordedAt, m.committedAt);
-      const row = byId.get(m.id) as unknown as MessageRow;
+    commit(message: Omit<ChannelMessage, 'seq' | 'heardBy'>): { message: ChannelMessage; created: boolean } {
+      const res = insertMsg.run(message.id, message.senderId, message.senderName, message.durationMs, message.recordedAt, message.committedAt);
+      const row = byId.get(message.id) as unknown as MessageRow;
       return { message: toMessage(row), created: res.changes > 0 };
     },
     get(id: string): ChannelMessage | null {
@@ -92,7 +92,7 @@ export function openDb(dataDir: string) {
       return (heardBy.get(msgId) as { n: number }).n;
     },
     expiredIds(beforeMs: number): string[] {
-      return (expired.all(beforeMs) as { id: string }[]).map((r) => r.id);
+      return (expired.all(beforeMs) as { id: string }[]).map((row) => row.id);
     },
     delete(id: string) {
       deleteReceipts.run(id);

@@ -13,7 +13,7 @@ export interface PlayHandlers {
 }
 
 export const clipPlayer = {
-  play(bytes: Uint8Array, fromMs: number, h: PlayHandlers): number {
+  play(bytes: Uint8Array, fromMs: number, handlers: PlayHandlers): number {
     clipPlayer.stop();
     const ctx = audioContext();
     const buf = mulawBuffer(bytes);
@@ -27,13 +27,13 @@ export const clipPlayer = {
     src.onEnded = () => {
       if (my !== token) return; // stopped or replaced, not a natural end
       clipPlayer.stop();
-      h.onEnd();
+      handlers.onEnd();
     };
     src.start(startedAt, offsetMs / 1000);
     node = src;
     ticker = setInterval(() => {
       if (my !== token) return;
-      h.onProgress(Math.min(durationMs, offsetMs + (ctx.currentTime - startedAt) * 1000));
+      handlers.onProgress(Math.min(durationMs, offsetMs + (ctx.currentTime - startedAt) * 1000));
     }, 100);
     return durationMs;
   },

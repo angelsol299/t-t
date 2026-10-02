@@ -17,10 +17,10 @@ import { colors } from '@/theme/tokens';
 /** 02–08: one screen; every state is driven by the store. */
 export default function Channel() {
   useGetMessagesQuery();
-  const c = useController();
-  const conn = useAppSelector((s) => s.connection);
-  const floor = useAppSelector((s) => s.floor);
-  const offset = useAppSelector((s) => s.session.serverOffset);
+  const controller = useController();
+  const conn = useAppSelector((state) => state.connection);
+  const floor = useAppSelector((state) => state.floor);
+  const offset = useAppSelector((state) => state.session.serverOffset);
   const saved = useAppSelector(selectSavedCount);
 
   const offline = conn.net === 'offline';
@@ -57,15 +57,15 @@ export default function Channel() {
           since={conn.offlineSince}
           saved={saved}
           nextRetryAt={conn.nextRetryAt}
-          onRetry={() => c.retryNow()}
+          onRetry={() => controller.retryNow()}
         />
       )}
       {conn.net === 'recovering' && (
-        <BackOnlineBand missed={conn.missedOnReturn ?? 0} onReplay={() => c.replayAll()} />
+        <BackOnlineBand missed={conn.missedOnReturn ?? 0} onReplay={() => controller.replayAll()} />
       )}
       <MessageList />
       {floor.denied && floor.holding && <FloorDeniedCard name={floor.denied.name} />}
-      <PttButton state={ptt} onPressIn={() => c.pressIn()} onPressOut={() => c.pressOut()} />
+      <PttButton state={ptt} onPressIn={() => controller.pressIn()} onPressOut={() => controller.pressOut()} />
     </SafeAreaView>
   );
 }

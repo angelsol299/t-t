@@ -24,7 +24,7 @@ interface Client {
 
 export type CommitResult = { message: ChannelMessage } | { missing: number[] };
 
-export function createChannel(db: Db, clips: ClipStore, log: (...a: unknown[]) => void) {
+export function createChannel(db: Db, clips: ClipStore, log: (...args: unknown[]) => void) {
   const clients = new Map<WebSocket, Client>();
   let floor: (Speaker & { lastDataAt: number }) | null = null;
   // Per-clip set of chunk seqs seen this process, used for contiguous acks.
@@ -37,7 +37,7 @@ export function createChannel(db: Db, clips: ClipStore, log: (...a: unknown[]) =
     const data = JSON.stringify(msg);
     for (const [ws] of clients) if (ws !== except && ws.readyState === ws.OPEN) ws.send(data);
   };
-  const onlineCount = () => new Set([...clients.values()].map((c) => c.clientId)).size;
+  const onlineCount = () => new Set([...clients.values()].map((client) => client.clientId)).size;
   const publicFloor = (): Speaker | null =>
     floor && { clientId: floor.clientId, name: floor.name, clipId: floor.clipId, startedAt: floor.startedAt };
 
@@ -51,15 +51,15 @@ export function createChannel(db: Db, clips: ClipStore, log: (...a: unknown[]) =
 
   function recordChunk(clipId: string, seq: number, payload: Uint8Array): number {
     clips.putChunk(clipId, seq, payload);
-    let s = seen.get(clipId);
-    if (!s) {
+    let seenChunks = seen.get(clipId);
+    if (!seenChunks) {
       // Seed from disk so acks stay correct after a server restart.
-      s = { set: new Set(clips.received(clipId)), upTo: -1 };
-      seen.set(clipId, s);
+      seenChunks = { set: new Set(clips.received(clipId)), upTo: -1 };
+      seen.set(clipId, seenChunks);
     }
-    s.set.add(seq);
-    while (s.set.has(s.upTo + 1)) s.upTo++;
-    return s.upTo;
+    seenChunks.set.add(seq);
+    while (seenChunks.set.has(seenChunks.upTo + 1)) seenChunks.upTo++;
+    return seenChunks.upTo;
   }
 
   /** The only way a message comes into existence. Idempotent per clip id. */
@@ -87,8 +87,8 @@ export function createChannel(db: Db, clips: ClipStore, log: (...a: unknown[]) =
   }
 
   function markHeard(msgId: string, clientId: string) {
-    const n = db.markHeard(msgId, clientId);
-    if (n !== null) broadcast({ t: 'receipt', msgId, heardBy: n });
+    const heardBy = db.markHeard(msgId, clientId);
+    if (heardBy !== null) broadcast({ t: 'receipt', msgId, heardBy: heardBy });
   }
 
   function onText(ws: WebSocket, raw: string) {
@@ -99,9 +99,9 @@ export function createChannel(db: Db, clips: ClipStore, log: (...a: unknown[]) =
       return;
     }
     if (msg.t === 'hello') {
-      for (const [other, c] of clients) {
+      for (const [other, client] of clients) {
         // A reconnect can beat the old socket's close; drop the stale one.
-        if (c.clientId === msg.clientId && other !== ws) {
+        if (client.clientId === msg.clientId && other !== ws) {
           clients.delete(other);
           other.terminate();
           if (floor?.clientId === msg.clientId) freeFloor('disconnected');

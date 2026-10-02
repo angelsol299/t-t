@@ -30,20 +30,20 @@ export function createClipStore(dataDir: string) {
       if (!fs.existsSync(dir(id))) return [];
       return fs
         .readdirSync(dir(id))
-        .filter((f) => f.endsWith('.ul'))
-        .map((f) => Number(f.slice(0, -3)))
-        .sort((a, b) => a - b);
+        .filter((file) => file.endsWith('.ul'))
+        .map((file) => Number(file.slice(0, -3)))
+        .sort((first, second) => first - second);
     },
     missing(id: string, total: number): number[] {
       const have = new Set(this.received(id));
       const out: number[] = [];
-      for (let i = 0; i < total; i++) if (!have.has(i)) out.push(i);
+      for (let seq = 0; seq < total; seq++) if (!have.has(seq)) out.push(seq);
       return out;
     },
     /** Concatenates chunks 0..total-1 into one file. Caller checks `missing` first. */
     assemble(id: string, total: number): number {
       const parts: Buffer[] = [];
-      for (let i = 0; i < total; i++) parts.push(fs.readFileSync(path.join(dir(id), `${i}.ul`)));
+      for (let seq = 0; seq < total; seq++) parts.push(fs.readFileSync(path.join(dir(id), `${seq}.ul`)));
       const all = Buffer.concat(parts);
       fs.writeFileSync(assembled(id), all);
       return all.length;

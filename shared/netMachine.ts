@@ -57,66 +57,66 @@ export function initialNetState(at: number): NetState {
   };
 }
 
-function nextQuality(s: NetState): boolean {
+function nextQuality(state: NetState): boolean {
   const bad =
-    (s.rtt !== null && s.rtt > WEAK_RTT_MS) ||
-    s.missedPongs >= WEAK_MISSED_PONGS ||
-    s.backlogMs > WEAK_BACKLOG_MS;
+    (state.rtt !== null && state.rtt > WEAK_RTT_MS) ||
+    state.missedPongs >= WEAK_MISSED_PONGS ||
+    state.backlogMs > WEAK_BACKLOG_MS;
   const good =
-    (s.rtt === null || s.rtt < GOOD_RTT_MS) && s.missedPongs === 0 && s.backlogMs < GOOD_BACKLOG_MS;
+    (state.rtt === null || state.rtt < GOOD_RTT_MS) && state.missedPongs === 0 && state.backlogMs < GOOD_BACKLOG_MS;
   if (bad) return true;
   if (good) return false;
-  return s.poorQuality; // in the hysteresis band: keep what we had
+  return state.poorQuality; // in the hysteresis band: keep what we had
 }
 
-function settled(s: NetState): Net {
-  return s.poorQuality ? 'weak' : 'online';
+function settled(state: NetState): Net {
+  return state.poorQuality ? 'weak' : 'online';
 }
 
-export function netReducer(s: NetState, e: NetEvent): NetState {
-  switch (e.type) {
+export function netReducer(state: NetState, event: NetEvent): NetState {
+  switch (event.type) {
     case 'link_up': {
-      const next: NetState = { ...s, linkUp: true, everConnected: true, downSince: null, missedPongs: 0 };
-      if (s.net === 'offline') {
-        return { ...next, net: 'recovering', recoveringUntil: e.at + RECOVERING_MS };
+      const next: NetState = { ...state, linkUp: true, everConnected: true, downSince: null, missedPongs: 0 };
+      if (state.net === 'offline') {
+        return { ...next, net: 'recovering', recoveringUntil: event.at + RECOVERING_MS };
       }
       return next;
     }
     case 'link_down': {
-      if (!s.linkUp) return s;
-      return { ...s, linkUp: false, downSince: e.at, rtt: null };
+      if (!state.linkUp) return state;
+      return { ...state, linkUp: false, downSince: event.at, rtt: null };
     }
     case 'pong': {
-      const next = { ...s, rtt: e.rtt, missedPongs: 0 };
+      const next = { ...state, rtt: event.rtt, missedPongs: 0 };
       next.poorQuality = nextQuality(next);
       return withSettled(next);
     }
     case 'ping_missed': {
-      const next = { ...s, missedPongs: s.missedPongs + 1 };
+      const next = { ...state, missedPongs: state.missedPongs + 1 };
       next.poorQuality = nextQuality(next);
       return withSettled(next);
     }
     case 'backlog': {
-      const next = { ...s, backlogMs: e.ms };
+      const next = { ...state, backlogMs: event.ms };
       next.poorQuality = nextQuality(next);
       return withSettled(next);
     }
     case 'tick': {
-      if (!s.linkUp && s.downSince !== null && s.net !== 'offline' && e.at - s.downSince >= ABSORB_MS) {
-        return { ...s, net: 'offline', offlineSince: s.downSince, recoveringUntil: null };
+      if (!state.linkUp && state.downSince !== null && state.net !== 'offline' && event.at - state.downSince >= ABSORB_MS) {
+        return { ...state, net: 'offline', offlineSince: state.downSince, recoveringUntil: null };
       }
-      if (s.net === 'recovering' && s.recoveringUntil !== null && e.at >= s.recoveringUntil) {
-        return { ...s, net: settled(s), recoveringUntil: null, offlineSince: null };
+      if (state.net === 'recovering' && state.recoveringUntil !== null && event.at >= state.recoveringUntil) {
+        return { ...state, net: settled(state), recoveringUntil: null, offlineSince: null };
       }
-      return s;
+      return state;
     }
   }
 }
 
 // Quality changes only move between online and weak while the link is up;
 // offline and recovering are driven by link events and ticks.
-function withSettled(s: NetState): NetState {
-  if (!s.linkUp) return s;
-  if (s.net === 'online' || s.net === 'weak') return { ...s, net: settled(s) };
-  return s;
+function withSettled(state: NetState): NetState {
+  if (!state.linkUp) return state;
+  if (state.net === 'online' || state.net === 'weak') return { ...state, net: settled(state) };
+  return state;
 }

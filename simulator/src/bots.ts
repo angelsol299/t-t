@@ -14,8 +14,8 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const NAMES = ['Anna', 'Jonas', 'Maria'];
 
 const time = () => new Date().toLocaleTimeString('en-GB');
-const log = (m: string) => {
-  process.stdout.write(`\r${time()}  ${m}\n> `);
+const log = (text: string) => {
+  process.stdout.write(`\r${time()}  ${text}\n> `);
 };
 
 function sample(name: string): Uint8Array | undefined {
@@ -26,11 +26,11 @@ function sample(name: string): Uint8Array | undefined {
 const bots = new Map<string, Bot>();
 for (const name of NAMES) {
   const bot = new Bot({ name, server: SERVER, sample: sample(name), log });
-  bot.on('floor_taken', (s) => {
-    if (name === NAMES[0] && !NAMES.includes(s.name)) log(`📣 ${s.name} is talking`);
+  bot.on('floor_taken', (speaker) => {
+    if (name === NAMES[0] && !NAMES.includes(speaker.name)) log(`📣 ${speaker.name} is talking`);
   });
-  bot.on('message', (m) => {
-    if (name === NAMES[0]) log(`✉  #${m.seq} ${m.senderName} ${(m.durationMs / 1000).toFixed(1)}s (heard by ${m.heardBy})`);
+  bot.on('message', (message) => {
+    if (name === NAMES[0]) log(`✉  #${message.seq} ${message.senderName} ${(message.durationMs / 1000).toFixed(1)}s (heard by ${message.heardBy})`);
   });
   bots.set(name.toLowerCase(), bot);
 }
@@ -46,9 +46,9 @@ async function race() {
   await tp.addToxic('app', { name: 'race', type: 'latency', stream: 'downstream', attributes: { latency: 1500 } }).catch(() => {
     log('(no Toxiproxy: race still runs, but you need to press within your round-trip time)');
   });
-  for (const n of ['3', '2', '1']) {
-    log(`race in ${n}…`);
-    await new Promise((r) => setTimeout(r, 1000));
+  for (const count of ['3', '2', '1']) {
+    log(`race in ${count}…`);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
   }
   log('GO — press now and keep holding');
   await anna.talk(4000);
@@ -65,26 +65,26 @@ const HELP = `
 `;
 
 async function handle(line: string) {
-  const [a, b, c] = line.trim().toLowerCase().split(/\s+/);
-  if (!a) return;
-  if (a === 'help') return console.log(HELP);
-  if (a === 'quit' || a === 'exit') {
+  const [command, arg, value] = line.trim().toLowerCase().split(/\s+/);
+  if (!command) return;
+  if (command === 'help') return console.log(HELP);
+  if (command === 'quit' || command === 'exit') {
     for (const bot of bots.values()) bot.close();
     process.exit(0);
   }
-  if (a === 'race') return race();
-  if (a === 'status') {
+  if (command === 'race') return race();
+  if (command === 'status') {
     for (const bot of bots.values()) {
       log(`${bot.name.padEnd(6)} ${bot.up ? 'online ' : 'offline'}  outbox ${bot.pending.size}  seen ${bot.messages.length}`);
     }
     return;
   }
-  if (a === 'auto') {
+  if (command === 'auto') {
     if (auto) clearInterval(auto);
     auto = null;
-    if (b !== 'off') {
+    if (arg !== 'off') {
       const tick = () => {
-        const list = [...bots.values()].filter((x) => x.up);
+        const list = [...bots.values()].filter((candidate) => candidate.up);
         const bot = list[Math.floor(Math.random() * list.length)];
         if (bot && !bot.floor) void bot.talk(2000 + Math.random() * 5000);
       };
@@ -93,14 +93,14 @@ async function handle(line: string) {
     } else log('auto chatter off');
     return;
   }
-  const bot = bots.get(a);
-  if (!bot) return log(`unknown "${a}" — try help`);
-  if (b === 'talk') return void bot.talk(Math.max(0.5, Number(c) || 3) * 1000);
-  if (b === 'leave') {
+  const bot = bots.get(command);
+  if (!bot) return log(`unknown "${command}" — try help`);
+  if (arg === 'talk') return void bot.talk(Math.max(0.5, Number(value) || 3) * 1000);
+  if (arg === 'leave') {
     bot.close();
     return log(`${bot.name} left`);
   }
-  if (b === 'join') {
+  if (arg === 'join') {
     await bot.connect();
     return log(`${bot.name} joined`);
   }
@@ -109,7 +109,7 @@ async function handle(line: string) {
 
 async function main() {
   console.log(`Bots connecting to ${SERVER}…`);
-  await Promise.all([...bots.values()].map((b) => b.connect()));
+  await Promise.all([...bots.values()].map((bot) => bot.connect()));
   console.log(`Connected: ${NAMES.join(', ')}. Type "help".`);
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout, prompt: '> ' });
   rl.prompt();

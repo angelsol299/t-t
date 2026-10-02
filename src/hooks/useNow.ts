@@ -5,8 +5,8 @@ export function useNow(active = true, ms = 1000): number {
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
     if (!active) return;
-    const t = setInterval(() => setNow(Date.now()), ms);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setNow(Date.now()), ms);
+    return () => clearInterval(timer);
   }, [active, ms]);
   return now;
 }

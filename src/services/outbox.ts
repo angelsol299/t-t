@@ -20,7 +20,7 @@ class Permanent extends Error {}
 interface Deps {
   dispatch: AppDispatch;
   getState: () => RootState;
-  onCommitted: (m: ChannelMessage) => void;
+  onCommitted: (message: ChannelMessage) => void;
 }
 
 export function createOutbox({ dispatch, getState, onCommitted }: Deps) {
@@ -28,19 +28,19 @@ export function createOutbox({ dispatch, getState, onCommitted }: Deps) {
   let retryTimer: ReturnType<typeof setTimeout> | null = null;
   const deleted = new Set<string>();
 
-  const items = () => Object.values(getState().outbox.items).sort((a, b) => a.recordedAt - b.recordedAt);
+  const items = () => Object.values(getState().outbox.items).sort((first, second) => first.recordedAt - second.recordedAt);
 
   function save(item: OutboxItem, progress = 0) {
     outboxStore.put(item);
     dispatch(outboxActions.upsert({ ...item, progress }));
   }
-  function patch(clipId: string, p: Partial<OutboxEntry>) {
+  function patch(clipId: string, changes: Partial<OutboxEntry>) {
     const cur = getState().outbox.items[clipId];
     if (!cur) return;
-    const next = { ...cur, ...p };
+    const next = { ...cur, ...changes };
     const { progress: _ignored, ...persisted } = next;
     outboxStore.put(persisted);
-    dispatch(outboxActions.patch({ clipId, ...p }));
+    dispatch(outboxActions.patch({ clipId, ...changes }));
   }
   function drop(clipId: string) {
     outboxStore.remove(clipId);
@@ -50,20 +50,20 @@ export function createOutbox({ dispatch, getState, onCommitted }: Deps) {
 
   async function request(path: string, init: RequestInit = {}) {
     const ctl = new AbortController();
-    const t = setTimeout(() => ctl.abort(), TIMEOUT_MS);
-    const s = getState().session;
+    const timer = setTimeout(() => ctl.abort(), TIMEOUT_MS);
+    const session = getState().session;
     try {
       return await fetch(`${SERVER_URL}${path}`, {
         ...init,
         signal: ctl.signal,
         headers: {
           ...(init.headers ?? {}),
-          'x-client-id': s.clientId,
-          'x-client-name': encodeURIComponent(s.name ?? 'Unknown'),
+          'x-client-id': session.clientId,
+          'x-client-name': encodeURIComponent(session.name ?? 'Unknown'),
         },
       });
     } finally {
-      clearTimeout(t);
+      clearTimeout(timer);
     }
   }
 

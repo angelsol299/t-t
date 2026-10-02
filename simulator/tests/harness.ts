@@ -20,7 +20,7 @@ let dataDir = '';
 const bots: Bot[] = [];
 let nextPort = 14_001;
 
-export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function until(cond: () => boolean, ms = 10_000, what = 'condition') {
   const end = Date.now() + ms;
@@ -48,7 +48,7 @@ export async function start() {
 }
 
 export async function stop() {
-  for (const b of bots) b.close();
+  for (const bot of bots) bot.close();
   bots.length = 0;
   await server?.close();
   tpProc?.kill();
@@ -60,10 +60,10 @@ export async function bot(name: string): Promise<{ bot: Bot; link: string }> {
   const port = nextPort++;
   const link = `link_${port}`;
   await TP.proxy(link, `127.0.0.1:${port}`, `127.0.0.1:${SERVER_PORT}`);
-  const b = new Bot({ name, server: `http://127.0.0.1:${port}` });
-  bots.push(b);
-  await b.connect();
-  return { bot: b, link };
+  const bot = new Bot({ name, server: `http://127.0.0.1:${port}` });
+  bots.push(bot);
+  await bot.connect();
+  return { bot: bot, link };
 }
 
 export async function serverMessages() {

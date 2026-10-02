@@ -27,14 +27,14 @@ const session = createSlice({
   name: 'session',
   initialState: load,
   reducers: {
-    setName(s, a: PayloadAction<string>) {
-      s.name = a.payload;
+    setName(state, action: PayloadAction<string>) {
+      state.name = action.payload;
     },
-    advanceSeq(s, a: PayloadAction<number>) {
-      if (a.payload > s.lastSeq) s.lastSeq = a.payload;
+    advanceSeq(state, action: PayloadAction<number>) {
+      if (action.payload > state.lastSeq) state.lastSeq = action.payload;
     },
-    setServerOffset(s, a: PayloadAction<number>) {
-      s.serverOffset = a.payload;
+    setServerOffset(state, action: PayloadAction<number>) {
+      state.serverOffset = action.payload;
     },
   },
 });

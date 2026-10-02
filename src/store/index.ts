@@ -32,10 +32,10 @@ export const useAppSelector = useSelector.withTypes<RootState>();
 listener.startListening({
   matcher: isAnyOf(setName, advanceSeq, setServerOffset),
   effect: (_, api) => {
-    const s = (api.getState() as RootState).session;
-    kv.set('name', s.name);
-    kv.set('lastSeq', s.lastSeq);
-    kv.set('serverOffset', s.serverOffset);
+    const session = (api.getState() as RootState).session;
+    kv.set('name', session.name);
+    kv.set('lastSeq', session.lastSeq);
+    kv.set('serverOffset', session.serverOffset);
   },
 });
 

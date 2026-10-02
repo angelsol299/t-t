@@ -23,7 +23,7 @@ export interface SocketHandlers {
   onRetryScheduled(at: number | null): void;
 }
 
-export function createSocket(h: SocketHandlers) {
+export function createSocket(handlers: SocketHandlers) {
   let ws: WebSocket | null = null;
   let up = false;
   let attempt = 0;
@@ -43,7 +43,7 @@ export function createSocket(h: SocketHandlers) {
   function markDown() {
     if (up) {
       up = false;
-      h.onLinkDown();
+      handlers.onLinkDown();
     }
   }
 
@@ -53,7 +53,7 @@ export function createSocket(h: SocketHandlers) {
     const delay = base / 2 + Math.random() * (base / 2); // jitter so a ward's phones don't stampede
     attempt++;
     const at = Date.now() + delay;
-    h.onRetryScheduled(at);
+    handlers.onRetryScheduled(at);
     retryTimer = setTimeout(connect, delay);
   }
 
@@ -80,19 +80,19 @@ export function createSocket(h: SocketHandlers) {
   function connect() {
     teardown();
     if (stopped) return;
-    h.onRetryScheduled(null);
+    handlers.onRetryScheduled(null);
     const sock = new WebSocket(WS_URL);
     sock.binaryType = 'arraybuffer';
     ws = sock;
 
     sock.onopen = () => {
       if (ws !== sock) return;
-      sock.send(JSON.stringify(h.hello()));
+      sock.send(JSON.stringify(handlers.hello()));
       pingTimer = setInterval(() => {
         if (ws !== sock) return;
         if (awaitingPong !== null) {
           missed++;
-          h.onPingMissed();
+          handlers.onPingMissed();
           if (missed >= MAX_MISSED) return onDead();
         }
         awaitingPong = Date.now();
@@ -103,7 +103,7 @@ export function createSocket(h: SocketHandlers) {
     sock.onmessage = (ev) => {
       if (ws !== sock) return;
       if (typeof ev.data !== 'string') {
-        h.onBinary(new Uint8Array(ev.data as ArrayBuffer));
+        handlers.onBinary(new Uint8Array(ev.data as ArrayBuffer));
         return;
       }
       let msg: ServerMsg;
@@ -117,15 +117,15 @@ export function createSocket(h: SocketHandlers) {
           awaitingPong = null;
           missed = 0;
         }
-        h.onPong(Date.now() - msg.ts, msg.serverTime + (Date.now() - msg.ts) / 2);
+        handlers.onPong(Date.now() - msg.ts, msg.serverTime + (Date.now() - msg.ts) / 2);
         return;
       }
       if (msg.t === 'welcome') {
         attempt = 0;
         up = true;
-        h.onLinkUp();
+        handlers.onLinkUp();
       }
-      h.onMessage(msg);
+      handlers.onMessage(msg);
     };
 
     sock.onerror = () => {

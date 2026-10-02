@@ -38,12 +38,12 @@ export interface TalkResult {
   live: boolean;
 }
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function tone(ms: number): Uint8Array {
-  const n = Math.round((ms / 1000) * SAMPLE_RATE);
-  const out = new Uint8Array(n);
-  for (let i = 0; i < n; i++) out[i] = 0x80 | Math.round(8 + 6 * Math.sin(i / 7)); // quiet µ-law hum
+  const sampleCount = Math.round((ms / 1000) * SAMPLE_RATE);
+  const out = new Uint8Array(sampleCount);
+  for (let index = 0; index < sampleCount; index++) out[index] = 0x80 | Math.round(8 + 6 * Math.sin(index / 7)); // quiet µ-law hum
   return out;
 }
 
@@ -56,7 +56,7 @@ export class Bot extends EventEmitter {
   private reconnectTimer: NodeJS.Timeout | null = null;
   private flushing = false;
   private sample: Uint8Array | undefined;
-  private log: (m: string) => void;
+  private log: (text: string) => void;
 
   up = false;
   lastSeq = 0;
@@ -155,29 +155,29 @@ export class Bot extends EventEmitter {
   }
 
   private receive(list: ChannelMessage[]) {
-    for (const m of list) {
-      this.messages.push(m);
-      this.lastSeq = Math.max(this.lastSeq, m.seq);
-      if (this.pending.delete(m.id)) this.emit('committed', m);
-      if (m.senderId !== this.clientId) this.send({ t: 'played', msgId: m.id });
-      this.emit('message', m);
+    for (const message of list) {
+      this.messages.push(message);
+      this.lastSeq = Math.max(this.lastSeq, message.seq);
+      if (this.pending.delete(message.id)) this.emit('committed', message);
+      if (message.senderId !== this.clientId) this.send({ t: 'played', msgId: message.id });
+      this.emit('message', message);
     }
   }
 
   private onBinary(data: Uint8Array) {
-    const f = decodeChunkFrame(data);
-    if (!f) return;
-    let set = this.heard.get(f.clipId);
-    if (!set) this.heard.set(f.clipId, (set = new Set()));
-    set.add(f.seq);
-    this.emit('chunk', f);
+    const frame = decodeChunkFrame(data);
+    if (!frame) return;
+    let set = this.heard.get(frame.clipId);
+    if (!set) this.heard.set(frame.clipId, (set = new Set()));
+    set.add(frame.seq);
+    this.emit('chunk', frame);
   }
 
   private audio(ms: number): Uint8Array {
     const want = Math.round((ms / 1000) * SAMPLE_RATE);
     const src = this.sample && this.sample.length > 0 ? this.sample : tone(ms);
     const out = new Uint8Array(want);
-    for (let i = 0; i < want; i++) out[i] = src[i % src.length];
+    for (let index = 0; index < want; index++) out[index] = src[index % src.length];
     return out;
   }
 
@@ -193,15 +193,15 @@ export class Bot extends EventEmitter {
     let live = false;
     if (this.up) {
       const answer = await new Promise<'granted' | 'denied' | 'timeout'>((resolve) => {
-        const done = (r: 'granted' | 'denied' | 'timeout') => {
+        const done = (result: 'granted' | 'denied' | 'timeout') => {
           this.off('floor_granted', onGrant);
           this.off('floor_denied', onDeny);
-          clearTimeout(t);
-          resolve(r);
+          clearTimeout(timer);
+          resolve(result);
         };
-        const onGrant = (m: { clipId: string }) => m.clipId === clipId && done('granted');
-        const onDeny = (m: { clipId: string }) => m.clipId === clipId && done('denied');
-        const t = setTimeout(() => done('timeout'), 1000);
+        const onGrant = (message: { clipId: string }) => message.clipId === clipId && done('granted');
+        const onDeny = (message: { clipId: string }) => message.clipId === clipId && done('denied');
+        const timer = setTimeout(() => done('timeout'), 1000);
         this.on('floor_granted', onGrant);
         this.on('floor_denied', onDeny);
         this.send({ t: 'floor_request', clipId, recordedAt });
@@ -215,7 +215,7 @@ export class Bot extends EventEmitter {
 
     const audio = this.audio(ms);
     const chunks: Uint8Array[] = [];
-    for (let o = 0; o < audio.length; o += CHUNK_SAMPLES) chunks.push(audio.subarray(o, o + CHUNK_SAMPLES));
+    for (let offset = 0; offset < audio.length; offset += CHUNK_SAMPLES) chunks.push(audio.subarray(offset, offset + CHUNK_SAMPLES));
     this.log(`${this.name}: talking ${(ms / 1000).toFixed(1)}s (${live ? 'live' : 'record-and-send'})`);
     const pending: Pending = { clipId, chunks, info: { total: chunks.length, durationMs: ms, recordedAt } };
     this.pending.set(clipId, pending);
@@ -242,26 +242,26 @@ export class Bot extends EventEmitter {
     if (this.flushing || this.pending.size === 0) return;
     this.flushing = true;
     try {
-      for (const p of [...this.pending.values()]) {
-        const res = await this.http(`/clips/${p.clipId}`);
+      for (const entry of [...this.pending.values()]) {
+        const res = await this.http(`/clips/${entry.clipId}`);
         const { received, committed } = (await res.json()) as { received: number[]; committed: boolean };
         if (!committed) {
           const have = new Set(received);
-          for (let seq = 0; seq < p.chunks.length; seq++) {
+          for (let seq = 0; seq < entry.chunks.length; seq++) {
             if (have.has(seq)) continue;
-            const put = await this.http(`/clips/${p.clipId}/chunks/${seq}`, { method: 'PUT', body: new Uint8Array(p.chunks[seq]) });
+            const put = await this.http(`/clips/${entry.clipId}/chunks/${seq}`, { method: 'PUT', body: new Uint8Array(entry.chunks[seq]) });
             if (!put.ok) throw new Error(`put ${put.status}`);
             this.puts++;
           }
         }
-        const done = await this.http(`/clips/${p.clipId}/complete`, {
+        const done = await this.http(`/clips/${entry.clipId}/complete`, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify(p.info),
+          body: JSON.stringify(entry.info),
         });
         if (!done.ok) throw new Error(`complete ${done.status}`);
         const { message } = (await done.json()) as { message: ChannelMessage };
-        if (this.pending.delete(p.clipId)) this.emit('committed', message);
+        if (this.pending.delete(entry.clipId)) this.emit('committed', message);
       }
     } catch {
       setTimeout(() => void this.flush(), 500); // link is bad: retry, never drop
@@ -271,19 +271,19 @@ export class Bot extends EventEmitter {
   }
 
   /** Resolves once this bot has been told about a committed message matching `pred`. */
-  waitFor(pred: (m: ChannelMessage) => boolean, ms = 15_000): Promise<ChannelMessage> {
+  waitFor(pred: (message: ChannelMessage) => boolean, ms = 15_000): Promise<ChannelMessage> {
     const found = this.messages.find(pred);
     if (found) return Promise.resolve(found);
     return new Promise((resolve, reject) => {
-      const t = setTimeout(() => {
+      const timer = setTimeout(() => {
         this.off('message', on);
         reject(new Error(`${this.name}: timed out waiting for message`));
       }, ms);
-      const on = (m: ChannelMessage) => {
-        if (!pred(m)) return;
-        clearTimeout(t);
+      const on = (message: ChannelMessage) => {
+        if (!pred(message)) return;
+        clearTimeout(timer);
         this.off('message', on);
-        resolve(m);
+        resolve(message);
       };
       this.on('message', on);
     });

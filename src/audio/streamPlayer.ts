@@ -23,17 +23,17 @@ let muted = false;
 // needs to be played to this user (MISSED) or was heard in full already.
 const heard = new Map<string, number>();
 
-function startNode(s: Stream) {
-  if (s.node || muted) return;
+function startNode(stream: Stream) {
+  if (stream.node || muted) return;
   const ctx = audioContext();
   const node = ctx.createBufferQueueSource();
   node.connect(ctx.destination);
-  for (const b of s.waiting) node.enqueueBuffer(mulawBuffer(b));
-  s.waiting = [];
+  for (const bytes of stream.waiting) node.enqueueBuffer(mulawBuffer(bytes));
+  stream.waiting = [];
   // Offset must be explicit: the library defaults it to -1 and then rejects
   // its own default ("offset must be a finite non-negative number: -1").
   node.start(ctx.currentTime, 0);
-  s.node = node;
+  stream.node = node;
 }
 
 export const streamPlayer = {
@@ -44,33 +44,33 @@ export const streamPlayer = {
   },
   chunk(clipId: string, seq: number, bytes: Uint8Array) {
     if (!current || current.clipId !== clipId) streamPlayer.begin(clipId);
-    const s = current!;
-    if (s.seqs.has(seq)) return;
-    s.seqs.add(seq);
-    heard.set(clipId, s.seqs.size);
-    if (s.node) {
-      s.node.enqueueBuffer(mulawBuffer(bytes));
+    const stream = current!;
+    if (stream.seqs.has(seq)) return;
+    stream.seqs.add(seq);
+    heard.set(clipId, stream.seqs.size);
+    if (stream.node) {
+      stream.node.enqueueBuffer(mulawBuffer(bytes));
       return;
     }
-    s.waiting.push(bytes);
-    if (s.firstAt === 0) {
-      s.firstAt = Date.now();
-      s.timer = setTimeout(() => startNode(s), JITTER_MS);
+    stream.waiting.push(bytes);
+    if (stream.firstAt === 0) {
+      stream.firstAt = Date.now();
+      stream.timer = setTimeout(() => startNode(stream), JITTER_MS);
     }
-    if (s.waiting.length * CHUNK_MS >= JITTER_MS) startNode(s);
+    if (stream.waiting.length * CHUNK_MS >= JITTER_MS) startNode(stream);
   },
   /** The speaker released: let what's queued play out. */
   end() {
-    const s = current;
+    const stream = current;
     current = null;
-    if (!s) return;
-    if (s.timer) clearTimeout(s.timer);
-    if (!s.node && s.waiting.length > 0 && !muted) startNode(s);
+    if (!stream) return;
+    if (stream.timer) clearTimeout(stream.timer);
+    if (!stream.node && stream.waiting.length > 0 && !muted) startNode(stream);
   },
   /** Talking pre-empts listening (and vice versa there is no overlap). */
-  setMuted(m: boolean) {
-    muted = m;
-    if (m && current?.node) {
+  setMuted(shouldMute: boolean) {
+    muted = shouldMute;
+    if (shouldMute && current?.node) {
       current.node.stop();
       current.node = null;
     }

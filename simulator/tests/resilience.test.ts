@@ -6,7 +6,7 @@ import { DIRECT, TP, bot, clipState, serverMessages, sleep, start, stop, until }
 beforeAll(start);
 afterAll(stop);
 
-const count = <T>(list: T[], pred: (x: T) => boolean) => list.filter(pred).length;
+const count = <T>(list: T[], pred: (item: T) => boolean) => list.filter(pred).length;
 
 describe('never quietly lose what someone said', () => {
   it('a clip recorded with no signal is delivered exactly once after recovery', async () => {
@@ -18,15 +18,15 @@ describe('never quietly lose what someone said', () => {
     const { clipId, live } = await anna.talk(1500, { realtime: false });
     expect(live).toBe(false);
     await sleep(1000);
-    expect(jonas.messages.some((m) => m.id === clipId)).toBe(false); // nothing partial leaked
+    expect(jonas.messages.some((message) => message.id === clipId)).toBe(false); // nothing partial leaked
 
     await TP.enable(link, true);
-    const got = await jonas.waitFor((m) => m.id === clipId);
+    const got = await jonas.waitFor((message) => message.id === clipId);
     expect(got.durationMs).toBe(1500);
 
     await sleep(1500); // give any duplicate a chance to show up
-    expect(count(jonas.messages, (m) => m.id === clipId)).toBe(1);
-    expect(count(await serverMessages(), (m) => m.id === clipId)).toBe(1);
+    expect(count(jonas.messages, (message) => message.id === clipId)).toBe(1);
+    expect(count(await serverMessages(), (message) => message.id === clipId)).toBe(1);
     expect(anna.pending.size).toBe(0);
   });
 
@@ -60,17 +60,17 @@ describe('never quietly lose what someone said', () => {
     await sleep(2500);
     await TP.removeToxic(link, 'reset');
 
-    await jonas.waitFor((m) => m.id === clipId, 20_000);
+    await jonas.waitFor((message) => message.id === clipId, 20_000);
     await sleep(1000);
-    expect(count(jonas.messages, (m) => m.id === clipId)).toBe(1);
-    expect(count(await serverMessages(), (m) => m.id === clipId)).toBe(1);
+    expect(count(jonas.messages, (message) => message.id === clipId)).toBe(1);
+    expect(count(await serverMessages(), (message) => message.id === clipId)).toBe(1);
   });
 
   it('a speaker cut mid-stream frees the floor within the lease, and the full clip arrives later', async () => {
     const { bot: anna, link } = await bot('Anna');
     const { bot: jonas } = await bot('Jonas');
     const freed: Extract<ServerMsg, { t: 'floor_free' }>[] = [];
-    jonas.on('floor_free', (m) => freed.push(m));
+    jonas.on('floor_free', (message) => freed.push(message));
 
     const talking = anna.talk(3000); // live, real time
     await until(() => jonas.floor?.name === 'Anna', 3000, 'Anna on air');
@@ -84,27 +84,27 @@ describe('never quietly lose what someone said', () => {
     expect(Date.now() - cutAt).toBeLessThan(4500);
     expect(freed[0].reason).toBe('lease_expired');
     expect(jonas.heard.get(clipId)!.size).toBeLessThan(12); // Jonas heard only part of it live…
-    expect(jonas.messages.some((m) => m.id === clipId)).toBe(false); // …and no partial message exists
+    expect(jonas.messages.some((message) => message.id === clipId)).toBe(false); // …and no partial message exists
 
     await talking;
     await TP.removeToxic(link, 'zombie');
-    const full = await jonas.waitFor((m) => m.id === clipId, 20_000);
+    const full = await jonas.waitFor((message) => message.id === clipId, 20_000);
     expect(full.durationMs).toBe(3000); // the whole recording, not the streamed part
-    expect(count(jonas.messages, (m) => m.id === clipId)).toBe(1);
+    expect(count(jonas.messages, (message) => message.id === clipId)).toBe(1);
   });
 
   it('reconnecting with lastSeq returns exactly the missed messages', async () => {
     const { bot: anna } = await bot('Anna');
     const { bot: maria } = await bot('Maria');
     maria.close();
-    const a = await anna.talk(600, { realtime: false });
-    const b = await anna.talk(600, { realtime: false });
+    const first = await anna.talk(600, { realtime: false });
+    const second = await anna.talk(600, { realtime: false });
     await until(() => anna.pending.size === 0, 10_000, 'Anna clips committed');
 
-    const welcome = new Promise<Extract<ServerMsg, { t: 'welcome' }>>((r) => maria.once('welcome', r));
+    const welcome = new Promise<Extract<ServerMsg, { t: 'welcome' }>>((resolve) => maria.once('welcome', resolve));
     await maria.connect();
-    const missed = (await welcome).missed.map((m) => m.id);
-    expect(missed).toEqual([a.clipId, b.clipId]);
+    const missed = (await welcome).missed.map((message) => message.id);
+    expect(missed).toEqual([first.clipId, second.clipId]);
   });
 });
 
@@ -118,7 +118,7 @@ describe('floor control', () => {
     const loser = ra.granted ? rj : ra;
     const winner = ra.granted ? ra : rj;
     await until(() => anna.pending.size === 0 && jonas.pending.size === 0, 10_000, 'outboxes to drain');
-    const ids = (await serverMessages()).map((m) => m.id);
+    const ids = (await serverMessages()).map((message) => message.id);
     expect(ids).toContain(winner.clipId);
     expect(ids).not.toContain(loser.clipId);
     expect((await clipState(loser.clipId)).received).toEqual([]);
@@ -142,7 +142,7 @@ describe('server idempotency and lateness', () => {
     const id = randomUUID();
     const [m1, m2] = await upload(id, Date.now());
     expect(m1.seq).toBe(m2.seq);
-    expect(count(await serverMessages(), (m) => m.id === id)).toBe(1);
+    expect(count(await serverMessages(), (message) => message.id === id)).toBe(1);
   });
 
   it('a clip committed more than 30s after it was said is flagged late', async () => {

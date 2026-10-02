@@ -18,21 +18,21 @@ const connection = createSlice({
     missedOnReturn: null,
   }),
   reducers: {
-    netEvent(s, a: PayloadAction<NetEvent>) {
-      const prev = s.net;
-      const next = netReducer(s, a.payload);
-      Object.assign(s, next);
-      if (prev !== 'offline' && next.net === 'offline') s.onlineAtDrop = s.online;
-      if (prev === 'recovering' && next.net !== 'recovering') s.missedOnReturn = null;
+    netEvent(state, action: PayloadAction<NetEvent>) {
+      const prev = state.net;
+      const next = netReducer(state, action.payload);
+      Object.assign(state, next);
+      if (prev !== 'offline' && next.net === 'offline') state.onlineAtDrop = state.online;
+      if (prev === 'recovering' && next.net !== 'recovering') state.missedOnReturn = null;
     },
-    setOnline(s, a: PayloadAction<number>) {
-      s.online = a.payload;
+    setOnline(state, action: PayloadAction<number>) {
+      state.online = action.payload;
     },
-    setNextRetry(s, a: PayloadAction<number | null>) {
-      s.nextRetryAt = a.payload;
+    setNextRetry(state, action: PayloadAction<number | null>) {
+      state.nextRetryAt = action.payload;
     },
-    setMissedOnReturn(s, a: PayloadAction<number | null>) {
-      s.missedOnReturn = a.payload;
+    setMissedOnReturn(state, action: PayloadAction<number | null>) {
+      state.missedOnReturn = action.payload;
     },
   },
 });

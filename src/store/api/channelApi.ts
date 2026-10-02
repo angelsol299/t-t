@@ -11,27 +11,27 @@ const SHIFT_MS = 12 * 60 * 60 * 1000;
 export const channelApi = createApi({
   reducerPath: 'channelApi',
   baseQuery: fakeBaseQuery(),
-  endpoints: (b) => ({
-    getMessages: b.query<ChannelMessage[], void>({
+  endpoints: (builder) => ({
+    getMessages: builder.query<ChannelMessage[], void>({
       queryFn: () => {
         messageCache.prune(Date.now() - SHIFT_MS);
         return { data: messageCache.load() };
       },
       keepUnusedDataFor: Number.MAX_SAFE_INTEGER,
     }),
-    retryClip: b.mutation<null, string>({
+    retryClip: builder.mutation<null, string>({
       queryFn: (clipId) => {
         registry.controller?.retryClip(clipId);
         return { data: null };
       },
     }),
-    deleteQueued: b.mutation<null, string>({
+    deleteQueued: builder.mutation<null, string>({
       queryFn: (clipId) => {
         registry.controller?.deleteQueued(clipId);
         return { data: null };
       },
     }),
-    markPlayed: b.mutation<null, string>({
+    markPlayed: builder.mutation<null, string>({
       queryFn: (msgId) => {
         registry.controller?.markPlayed(msgId);
         return { data: null };
@@ -45,20 +45,20 @@ export const { useGetMessagesQuery, useRetryClipMutation, useDeleteQueuedMutatio
 export const upsertMessages = (list: ChannelMessage[]) => {
   messageCache.upsert(list);
   return channelApi.util.updateQueryData('getMessages', undefined, (draft) => {
-    for (const m of list) {
-      const i = draft.findIndex((x) => x.id === m.id);
-      if (i >= 0) draft[i] = m;
-      else draft.push(m);
+    for (const message of list) {
+      const index = draft.findIndex((existing) => existing.id === message.id);
+      if (index >= 0) draft[index] = message;
+      else draft.push(message);
     }
-    draft.sort((a, b) => a.seq - b.seq);
+    draft.sort((first, second) => first.seq - second.seq);
   });
 };
 
 export const setHeardBy = (msgId: string, heardBy: number) =>
   channelApi.util.updateQueryData('getMessages', undefined, (draft) => {
-    const m = draft.find((x) => x.id === msgId);
-    if (m) {
-      m.heardBy = heardBy;
-      messageCache.upsert([{ ...m }]);
+    const message = draft.find((existing) => existing.id === msgId);
+    if (message) {
+      message.heardBy = heardBy;
+      messageCache.upsert([{ ...message }]);
     }
   });

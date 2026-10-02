@@ -42,8 +42,8 @@ export default function RootLayout() {
 }
 
 function Root({ fontsLoaded }: { fontsLoaded: boolean }) {
-  const name = useAppSelector((s) => s.session.name);
-  const connected = useAppSelector((s) => s.connection.everConnected);
+  const name = useAppSelector((state) => state.session.name);
+  const connected = useAppSelector((state) => state.connection.everConnected);
   const [minElapsed, setMinElapsed] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
 

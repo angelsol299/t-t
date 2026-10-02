@@ -49,7 +49,7 @@ export function toxiproxy(api = process.env.TOXIPROXY_API ?? 'http://localhost:8
     /** Back to a clean link: enabled, no toxics. */
     async reset(proxy: string) {
       const toxics = ((await call('GET', `/proxies/${proxy}/toxics`)) ?? []) as { name: string }[];
-      for (const t of toxics) await call('DELETE', `/proxies/${proxy}/toxics/${t.name}`);
+      for (const toxic of toxics) await call('DELETE', `/proxies/${proxy}/toxics/${toxic.name}`);
       await call('POST', `/proxies/${proxy}`, { enabled: true });
     },
     async list() {

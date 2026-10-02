@@ -18,10 +18,10 @@ let samples = 0;
 let handlers: RecordingHandlers | null = null;
 let lastLevelAt = 0;
 
-function append(a: Float32Array, b: Float32Array) {
-  const out = new Float32Array(a.length + b.length);
-  out.set(a);
-  out.set(b, a.length);
+function append(head: Float32Array, tail: Float32Array) {
+  const out = new Float32Array(head.length + tail.length);
+  out.set(head);
+  out.set(tail, head.length);
   return out;
 }
 
@@ -36,13 +36,13 @@ export async function micPermission(ask: boolean): Promise<boolean> {
   return status === 'Granted';
 }
 
-export async function startRecording(h: RecordingHandlers): Promise<boolean> {
+export async function startRecording(recordingHandlers: RecordingHandlers): Promise<boolean> {
   setupSession();
   if (!recorder) {
     recorder = new AudioRecorder();
     recorder.disableFileOutput();
   }
-  handlers = h;
+  handlers = recordingHandlers;
   pending = new Float32Array(0);
   seq = 0;
   samples = 0;

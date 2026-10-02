@@ -15,14 +15,14 @@ function readBody(req: IncomingMessage): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const parts: Buffer[] = [];
     let size = 0;
-    req.on('data', (c: Buffer) => {
-      size += c.length;
+    req.on('data', (chunk: Buffer) => {
+      size += chunk.length;
       if (size > MAX_BODY) {
         reject(new Error('too large'));
         req.destroy();
         return;
       }
-      parts.push(c);
+      parts.push(chunk);
     });
     req.on('end', () => resolve(Buffer.concat(parts)));
     req.on('error', reject);

@@ -38,8 +38,8 @@ function YouChip() {
  * resync it on start, pause and resume.
  */
 function LengthPill({ ms, play }: { ms: number; play?: RowPlayState }) {
-  const d = duration(ms);
-  const [t] = useState(() => new Animated.Value(0));
+  const lengthLabel = duration(ms);
+  const [progress] = useState(() => new Animated.Value(0));
   const active = !!play;
   const playing = !!play?.playing;
   const total = play?.durationMs || ms;
@@ -51,13 +51,13 @@ function LengthPill({ ms, play }: { ms: number; play?: RowPlayState }) {
 
   useEffect(() => {
     if (!active || total <= 0) {
-      t.setValue(0);
+      progress.setValue(0);
       return;
     }
     const from = Math.min(1, position.current / total);
-    t.setValue(from);
+    progress.setValue(from);
     if (!playing) return;
-    const anim = Animated.timing(t, {
+    const anim = Animated.timing(progress, {
       toValue: 1,
       duration: Math.max(0, total * (1 - from)),
       easing: Easing.linear,
@@ -65,17 +65,17 @@ function LengthPill({ ms, play }: { ms: number; play?: RowPlayState }) {
     });
     anim.start();
     return () => anim.stop();
-  }, [active, playing, total, t]);
+  }, [active, playing, total, progress]);
 
   return (
     <View
       style={[styles.length, active && styles.lengthActive]}
       accessible
-      accessibilityLabel={active ? `Length ${d}, ${duration(play.positionMs)} played` : `Length ${d}`}
+      accessibilityLabel={active ? `Length ${lengthLabel}, ${duration(play.positionMs)} played` : `Length ${lengthLabel}`}
     >
-      {active && <Animated.View style={[styles.lengthFill, { transform: [{ scaleX: t }] }]} />}
+      {active && <Animated.View style={[styles.lengthFill, { transform: [{ scaleX: progress }] }]} />}
       <AudioLines size={12} color={colors.ink} strokeWidth={2.4} />
-      <Text style={[type.pill, { color: colors.ink }]}>{d}</Text>
+      <Text style={[type.pill, { color: colors.ink }]}>{lengthLabel}</Text>
     </View>
   );
 }

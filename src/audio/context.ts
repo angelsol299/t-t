@@ -30,9 +30,9 @@ export function audioContext(): AudioContext {
  * audio must be upsampled here or it plays ~6× fast and sounds like noise.
  */
 export function mulawBuffer(bytes: Uint8Array) {
-  const c = audioContext();
-  const pcm = resample(decodeToFloat(bytes), SAMPLE_RATE, c.sampleRate);
-  const buf = c.createBuffer(1, Math.max(1, pcm.length), c.sampleRate);
+  const context = audioContext();
+  const pcm = resample(decodeToFloat(bytes), SAMPLE_RATE, context.sampleRate);
+  const buf = context.createBuffer(1, Math.max(1, pcm.length), context.sampleRate);
   buf.copyToChannel(pcm, 0);
   return buf;
 }
