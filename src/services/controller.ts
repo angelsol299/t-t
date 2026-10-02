@@ -2,6 +2,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { randomUUID } from 'expo-crypto';
 import * as Haptics from 'expo-haptics';
 import { clipPlayer } from '@/audio/clipPlayer';
+import { debugTrace } from '@/utils/debugTrace'; // TEMP DEBUG
 import { micPermission, startRecording, stopRecording } from '@/audio/recorder';
 import { streamPlayer } from '@/audio/streamPlayer';
 import { goLiveTone } from '@/audio/tone';
@@ -256,6 +257,7 @@ export function createController(store: Store) {
     const canStream = socket.isUp && (net.net === 'online' || net.net === 'recovering');
     const mode = canStream ? 'pending' : 'local';
     dispatch(startMine({ clipId, startedAt: Date.now(), mode }));
+    debugTrace.log('startMine', { mode, canStream }); // TEMP DEBUG
     outbox.begin(clipId, recordedAt);
     lastLiveChunkAcked = -1;
     const recording: NonNullable<typeof activeRecording> = {
@@ -274,6 +276,7 @@ export function createController(store: Store) {
     streamPlayer.setMuted(true);
     recording.startPromise = startRecording({
       onChunk: (seq, bytes) => {
+        debugTrace.log('chunk', { seq }); // TEMP DEBUG
         clipFiles.writeChunk(clipId, seq, bytes); // disk first, then the wire
         if (activeRecording !== recording) return;
         recording.recorded = seq + 1;
@@ -291,6 +294,7 @@ export function createController(store: Store) {
     }
     if (afterWait && !canStream) goLiveTone();
     const micStarted = await recording.startPromise;
+    debugTrace.log('micStarted', { micStarted }); // TEMP DEBUG
     if (!micStarted && activeRecording === recording) {
       await discardRecording();
       notice('Could not open the microphone');
@@ -449,12 +453,14 @@ export function createController(store: Store) {
       socket.stop();
     },
     pressIn() {
+      debugTrace.begin({ net: getState().connection.net, socketUp: socket.isUp, speaker: !!getState().floor.speaker }); // TEMP DEBUG
       dispatch(setHolding(true));
       // Someone is live: keep holding and you go live when they stop (04).
       if (getState().floor.speaker) return;
       void beginTalking();
     },
     pressOut() {
+      debugTrace.end({ my: getState().floor.my, recording: activeRecording ? { recorded: activeRecording.recorded } : null }); // TEMP DEBUG
       dispatch(setHolding(false));
       if (activeRecording) void endTalking();
     },
