@@ -30,7 +30,9 @@ function startNode(s: Stream) {
   node.connect(ctx.destination);
   for (const b of s.waiting) node.enqueueBuffer(mulawBuffer(b));
   s.waiting = [];
-  node.start(ctx.currentTime);
+  // Offset must be explicit: the library defaults it to -1 and then rejects
+  // its own default ("offset must be a finite non-negative number: -1").
+  node.start(ctx.currentTime, 0);
   s.node = node;
 }
 
