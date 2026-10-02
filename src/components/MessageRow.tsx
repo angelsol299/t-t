@@ -2,7 +2,7 @@ import { AudioLines, Check, Mic, Pause, Play, Trash2 } from 'lucide-react-native
 import { memo, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Row } from '@/store/selectors';
-import { colors, fonts, MIN_TOUCH_TARGET, radii, tracking, type } from '@/theme/tokens';
+import { Design } from '@/theme/Design';
 import { clock, duration, sentAgo } from '@/utils/format';
 
 export interface RowPlayState {
@@ -25,7 +25,7 @@ interface Props {
 function YouChip() {
   return (
     <View style={styles.you}>
-      <Mic size={14} color={colors.ink} strokeWidth={2} />
+      <Mic size={14} color={Design.color.ink} strokeWidth={2} />
       <Text style={styles.youText}>You</Text>
     </View>
   );
@@ -74,8 +74,8 @@ function LengthPill({ ms, play }: { ms: number; play?: RowPlayState }) {
       accessibilityLabel={active ? `Length ${lengthLabel}, ${duration(play.positionMs)} played` : `Length ${lengthLabel}`}
     >
       {active && <Animated.View style={[styles.lengthFill, { transform: [{ scaleX: progress }] }]} />}
-      <AudioLines size={12} color={colors.ink} strokeWidth={2.4} />
-      <Text style={[type.pill, { color: colors.ink }]}>{lengthLabel}</Text>
+      <AudioLines size={12} color={Design.color.ink} strokeWidth={2.4} />
+      <Text style={[Design.typography.pill, { color: Design.color.ink }]}>{lengthLabel}</Text>
     </View>
   );
 }
@@ -83,7 +83,7 @@ function LengthPill({ ms, play }: { ms: number; play?: RowPlayState }) {
 function Tag({ text, background, foreground, caps }: { text: string; background: string; foreground: string; caps?: boolean }) {
   return (
     <View style={[styles.tag, { backgroundColor: background }]}>
-      <Text style={[caps ? styles.tagCaps : type.pill, { color: foreground }]}>{text}</Text>
+      <Text style={[caps ? styles.tagCaps : Design.typography.pill, { color: foreground }]}>{text}</Text>
     </View>
   );
 }
@@ -99,9 +99,9 @@ function PlayButton({ playing, onPress, label }: { playing: boolean; onPress: ()
       style={[styles.play, playing && styles.playActive]}
     >
       {playing ? (
-        <Pause size={13} color={colors.liveText} fill={colors.liveText} strokeWidth={0} />
+        <Pause size={13} color={Design.color.liveText} fill={Design.color.liveText} strokeWidth={0} />
       ) : (
-        <Play size={13} color={colors.ink} fill={colors.ink} strokeWidth={0} style={{ marginLeft: 2 }} />
+        <Play size={13} color={Design.color.ink} fill={Design.color.ink} strokeWidth={0} style={{ marginLeft: 2 }} />
       )}
     </Pressable>
   );
@@ -116,7 +116,7 @@ function Bar({ percent, track, fill }: { percent: number; track: string; fill: s
 }
 
 function MessageRowImpl({ row, play, now, onPlay, onDelete, onRetry }: Props) {
-  const sender = row.mine ? <YouChip /> : <Text style={[type.rowStrong, { color: colors.ink }]}>{row.name}</Text>;
+  const sender = row.mine ? <YouChip /> : <Text style={[Design.typography.rowStrong, { color: Design.color.ink }]}>{row.name}</Text>;
   const senderDescription = row.mine ? 'Your message' : `Message from ${row.name}`;
 
   // Weak signal upload: stacked row with progress (05).
@@ -125,11 +125,11 @@ function MessageRowImpl({ row, play, now, onPlay, onDelete, onRetry }: Props) {
       <View style={styles.stack} accessible accessibilityLabel={`${senderDescription}, sending ${row.receipt.percent} percent`}>
         <View style={styles.stackHead}>
           {sender}
-          <Text style={[type.rowStrong, styles.tabular, { color: colors.weakText, fontFamily: fonts.semiBold }]}>
+          <Text style={[Design.typography.rowStrong, styles.tabular, { color: Design.color.weakText, fontFamily: Design.fontFamily.semiBold }]}>
             Sending {row.receipt.percent}%
           </Text>
         </View>
-        <Bar percent={row.receipt.percent} track={colors.weakBg} fill={colors.weakText} />
+        <Bar percent={row.receipt.percent} track={Design.color.weakBg} fill={Design.color.weakText} />
       </View>
     );
   }
@@ -142,7 +142,7 @@ function MessageRowImpl({ row, play, now, onPlay, onDelete, onRetry }: Props) {
     case 'heard':
       meta = (
         <View style={styles.metaRow}>
-          {row.receipt.n > 0 && <Check size={14} color={colors.backText} strokeWidth={2.4} />}
+          {row.receipt.n > 0 && <Check size={14} color={Design.color.backText} strokeWidth={2.4} />}
           <Text style={styles.meta}>
             {row.receipt.n > 0 ? `Heard by ${row.receipt.n} · ${clock(row.at)}` : clock(row.at)}
           </Text>
@@ -153,12 +153,12 @@ function MessageRowImpl({ row, play, now, onPlay, onDelete, onRetry }: Props) {
       meta = <Text style={styles.meta}>Sending… · {clock(row.at)}</Text>;
       break;
     case 'queued':
-      meta = <Tag text="Not sent yet" background={colors.offlineBg} foreground={colors.offline} />;
+      meta = <Tag text="Not sent yet" background={Design.color.offlineBg} foreground={Design.color.offline} />;
       break;
     case 'failed':
       meta = (
         <Pressable onPress={() => onRetry(row.id)} accessibilityRole="button" accessibilityLabel="Not sent. Tap to retry">
-          <Tag text="Not sent · Retry" background={colors.offlineBg} foreground={colors.offline} />
+          <Tag text="Not sent · Retry" background={Design.color.offlineBg} foreground={Design.color.offline} />
         </Pressable>
       );
       break;
@@ -170,10 +170,10 @@ function MessageRowImpl({ row, play, now, onPlay, onDelete, onRetry }: Props) {
     <View style={[styles.row0, styles.row]}>
       <View style={styles.lead}>
         {sender}
-        {row.missed && <Tag text="MISSED" background={colors.offlineBg} foreground={colors.offline} caps />}
+        {row.missed && <Tag text="MISSED" background={Design.color.offlineBg} foreground={Design.color.offline} caps />}
         <LengthPill ms={row.durationMs} play={play.current ? play : undefined} />
-        {row.late && <Tag text={sentAgo(row.at, now)} background={colors.neutral200} foreground={colors.neutral700} />}
-        {row.cutShort && <Tag text="Cut short" background={colors.neutral200} foreground={colors.neutral700} />}
+        {row.late && <Tag text={sentAgo(row.at, now)} background={Design.color.neutral200} foreground={Design.color.neutral700} />}
+        {row.cutShort && <Tag text="Cut short" background={Design.color.neutral200} foreground={Design.color.neutral700} />}
       </View>
       {meta}
       {deletable && (
@@ -184,7 +184,7 @@ function MessageRowImpl({ row, play, now, onPlay, onDelete, onRetry }: Props) {
           accessibilityLabel="Delete"
           accessibilityHint="Deletes this unsent message"
         >
-          <Trash2 size={16} color={colors.offline} strokeWidth={2} />
+          <Trash2 size={16} color={Design.color.offline} strokeWidth={2} />
         </Pressable>
       )}
       <PlayButton playing={play.playing} onPress={() => onPlay(row.id)} label={senderDescription} />
@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     paddingLeft: 20,
     paddingRight: 6,
     borderTopWidth: 1,
-    borderTopColor: colors.neutral300,
+    borderTopColor: Design.color.neutral300,
   },
   lead: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   stack: {
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 20,
     borderTopWidth: 1,
-    borderTopColor: colors.neutral300,
+    borderTopColor: Design.color.neutral300,
   },
   stackHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   you: {
@@ -219,22 +219,22 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 4,
     paddingHorizontal: 10,
-    borderRadius: radii.pill,
-    backgroundColor: colors.neutral200,
+    borderRadius: Design.radius.pill,
+    backgroundColor: Design.color.neutral200,
   },
-  youText: { fontFamily: fonts.bold, fontSize: 13, color: colors.ink },
+  youText: { fontFamily: Design.fontFamily.bold, fontSize: 13, color: Design.color.ink },
   length: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     paddingVertical: 2,
     paddingHorizontal: 8,
-    borderRadius: radii.pill,
+    borderRadius: Design.radius.pill,
     borderWidth: 1.5,
-    borderColor: colors.neutral300,
+    borderColor: Design.color.neutral300,
     overflow: 'hidden',
   },
-  lengthActive: { borderColor: colors.live },
+  lengthActive: { borderColor: Design.color.live },
   lengthFill: {
     position: 'absolute',
     top: 0,
@@ -242,11 +242,11 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     transformOrigin: 'left',
-    backgroundColor: colors.live,
+    backgroundColor: Design.color.live,
   },
-  tag: { paddingVertical: 3, paddingHorizontal: 8, borderRadius: radii.pill },
-  tagCaps: { fontFamily: fonts.semiBold, fontSize: 11, letterSpacing: tracking(0.08, 11) },
-  meta: { ...type.row, color: colors.neutral700, fontVariant: ['tabular-nums'] },
+  tag: { paddingVertical: 3, paddingHorizontal: 8, borderRadius: Design.radius.pill },
+  tagCaps: { fontFamily: Design.fontFamily.semiBold, fontSize: 11, letterSpacing: Design.letterSpacing(0.08, 11) },
+  meta: { ...Design.typography.row, color: Design.color.neutral700, fontVariant: ['tabular-nums'] },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   tabular: { fontVariant: ['tabular-nums'] },
   // 36px visual, padded to a 44px hit area by the row padding + hitSlop
@@ -256,12 +256,12 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: Design.color.white,
     borderWidth: 1.5,
-    borderColor: colors.neutral300,
+    borderColor: Design.color.neutral300,
   },
-  playActive: { backgroundColor: colors.live, borderColor: colors.live },
-  delete: { width: MIN_TOUCH_TARGET, height: MIN_TOUCH_TARGET, alignItems: 'center', justifyContent: 'center', marginRight: -8 },
+  playActive: { backgroundColor: Design.color.live, borderColor: Design.color.live },
+  delete: { width: Design.layout.minimumTouchTarget, height: Design.layout.minimumTouchTarget, alignItems: 'center', justifyContent: 'center', marginRight: -8 },
   bar: { height: 4, borderRadius: 4, overflow: 'hidden' },
   barFill: { height: '100%', borderRadius: 4 },
 });

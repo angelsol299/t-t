@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Net } from '@shared/netMachine';
-import { colors, type } from '@/theme/tokens';
+import { Design } from '@/theme/Design';
 import { Logo } from './Logo';
 
 interface Status {
@@ -13,10 +13,10 @@ interface Status {
 }
 
 const STATUS: Record<Net, Status> = {
-  online: { label: 'Online', dot: colors.live, halo: colors.liveHalo, haloWidth: 4, text: colors.ink },
-  recovering: { label: 'Online', dot: colors.live, halo: colors.liveHalo, haloWidth: 4, text: colors.ink },
-  weak: { label: 'Weak', dot: colors.weakDot, halo: colors.weakBg, haloWidth: 3, text: colors.weakText },
-  offline: { label: 'Offline', dot: colors.offline, halo: colors.offlineBg, haloWidth: 4, text: colors.neutral700 },
+  online: { label: 'Online', dot: Design.color.live, halo: Design.color.liveHalo, haloWidth: 4, text: Design.color.ink },
+  recovering: { label: 'Online', dot: Design.color.live, halo: Design.color.liveHalo, haloWidth: 4, text: Design.color.ink },
+  weak: { label: 'Weak', dot: Design.color.weakDot, halo: Design.color.weakBg, haloWidth: 3, text: Design.color.weakText },
+  offline: { label: 'Offline', dot: Design.color.offline, halo: Design.color.offlineBg, haloWidth: 4, text: Design.color.neutral700 },
 };
 
 const DOT = 8;
@@ -82,15 +82,15 @@ export function TopBar({ net, right, onLongPressBrand }: Props) {
         style={styles.brand}
       >
         <Logo size={22} />
-        <Text style={[type.brand, { color: colors.ink }]}>Teton Talk</Text>
+        <Text style={[Design.typography.brand, { color: Design.color.ink }]}>Teton Talk</Text>
       </Pressable>
       {status ? (
         <View style={styles.status} accessibilityLabel={`Network ${status.label}`} accessibilityRole="text">
           <StatusDot {...status} />
-          <Text style={[type.caps, { color: status.text }]}>{status.label}</Text>
+          <Text style={[Design.typography.caps, { color: status.text }]}>{status.label}</Text>
         </View>
       ) : right ? (
-        <Text style={[type.caps, { color: colors.ink }]}>{right}</Text>
+        <Text style={[Design.typography.caps, { color: Design.color.ink }]}>{right}</Text>
       ) : null}
     </View>
   );

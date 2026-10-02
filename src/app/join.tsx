@@ -8,7 +8,7 @@ import { CHANNEL_NAME, SERVER_URL } from '@/config';
 import { registry } from '@/services/registry';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { setName } from '@/store/slices/session';
-import { colors, fonts, radii, tracking, type } from '@/theme/tokens';
+import { Design } from '@/theme/Design';
 
 /** 01: a name and a live preview of how others see you. */
 export default function Join() {
@@ -44,7 +44,7 @@ export default function Join() {
       <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <TopBar right={CHANNEL_NAME} />
         <View style={styles.body}>
-          <Text style={[type.headline, { color: colors.ink }]} accessibilityRole="header">
+          <Text style={[Design.typography.headline, { color: Design.color.ink }]} accessibilityRole="header">
             What should the team call you?
           </Text>
           <View style={styles.field}>
@@ -59,9 +59,9 @@ export default function Join() {
               returnKeyType="go"
               onSubmitEditing={submit}
               placeholder="Your name"
-              placeholderTextColor={colors.neutral400}
-              selectionColor={colors.accent}
-              cursorColor={colors.accent}
+              placeholderTextColor={Design.color.neutral400}
+              selectionColor={Design.color.accent}
+              cursorColor={Design.color.accent}
               accessibilityLabel="Your name"
               style={styles.input}
             />
@@ -71,16 +71,16 @@ export default function Join() {
               <Text style={styles.avatarText}>{(trimmed[0] ?? '?').toUpperCase()}</Text>
             </View>
             <View style={styles.previewText}>
-              <Text style={[type.bodyStrong, { color: colors.ink }]} numberOfLines={1}>
+              <Text style={[Design.typography.bodyStrong, { color: Design.color.ink }]} numberOfLines={1}>
                 {trimmed || 'Your name'} is talking…
               </Text>
-              <Text style={[type.meta, { color: colors.neutral700 }]}>This is how others see you</Text>
+              <Text style={[Design.typography.meta, { color: Design.color.neutral700 }]}>This is how others see you</Text>
             </View>
           </View>
           <View style={styles.spacer} />
           <View style={styles.foot}>
-            <History size={16} color={colors.neutral700} strokeWidth={2} />
-            <Text style={[type.meta, { color: colors.neutral700 }]}>Talk is recorded and kept for 30 days.</Text>
+            <History size={16} color={Design.color.neutral700} strokeWidth={2} />
+            <Text style={[Design.typography.meta, { color: Design.color.neutral700 }]}>Talk is recorded and kept for 30 days.</Text>
           </View>
         </View>
         <Pressable
@@ -91,10 +91,10 @@ export default function Join() {
           accessibilityState={{ disabled: !trimmed }}
           style={({ pressed }) => [styles.cta, (!trimmed || pressed) && { opacity: trimmed ? 0.9 : 0.4 }]}
         >
-          <Text style={[type.cta, { color: colors.ground }]}>{edit ? 'Save name' : `Join ${CHANNEL_NAME}`}</Text>
+          <Text style={[Design.typography.cta, { color: Design.color.ground }]}>{edit ? 'Save name' : `Join ${CHANNEL_NAME}`}</Text>
           <View style={styles.ctaRight}>
             {online !== null && <Text style={styles.ctaOnline}>{online} online</Text>}
-            <ArrowRight size={20} color={colors.ground} strokeWidth={2} />
+            <ArrowRight size={20} color={Design.color.ground} strokeWidth={2} />
           </View>
         </Pressable>
       </KeyboardAvoidingView>
@@ -103,44 +103,44 @@ export default function Join() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.ground },
+  root: { flex: 1, backgroundColor: Design.color.ground },
   body: { flex: 1, paddingTop: 40, paddingHorizontal: 20, paddingBottom: 24, gap: 24 },
   field: {
-    backgroundColor: colors.white,
+    backgroundColor: Design.color.white,
     borderWidth: 2,
-    borderColor: colors.ink,
-    borderRadius: radii.field,
+    borderColor: Design.color.ink,
+    borderRadius: Design.radius.field,
     paddingTop: 14,
     paddingHorizontal: 18,
     paddingBottom: 16,
     gap: 4,
   },
-  label: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: tracking(0.14, 11), color: colors.neutral700 },
-  input: { ...type.input, color: colors.ink, padding: 0, lineHeight: 33 },
+  label: { fontFamily: Design.fontFamily.bold, fontSize: 11, letterSpacing: Design.letterSpacing(0.14, 11), color: Design.color.neutral700 },
+  input: { ...Design.typography.input, color: Design.color.ink, padding: 0, lineHeight: 33 },
   preview: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 4 },
   avatar: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.ink,
+    backgroundColor: Design.color.ink,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { fontFamily: fonts.bold, fontSize: 15, color: colors.ground },
+  avatarText: { fontFamily: Design.fontFamily.bold, fontSize: 15, color: Design.color.ground },
   previewText: { flex: 1, gap: 2 },
   spacer: { flex: 1 },
   foot: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   cta: {
     height: 80,
-    borderRadius: radii.phone,
+    borderRadius: Design.radius.phone,
     marginHorizontal: 10,
     marginBottom: 10,
-    backgroundColor: colors.ink,
+    backgroundColor: Design.color.ink,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
   },
   ctaRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  ctaOnline: { fontFamily: fonts.medium, fontSize: 14, color: colors.ground, opacity: 0.7 },
+  ctaOnline: { fontFamily: Design.fontFamily.medium, fontSize: 14, color: Design.color.ground, opacity: 0.7 },
 });

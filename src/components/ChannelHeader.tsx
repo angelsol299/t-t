@@ -1,13 +1,13 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { colors, type } from '@/theme/tokens';
+import { Design } from '@/theme/Design';
 
 export function ChannelHeader({ name, sub }: { name: string; sub: string }) {
   return (
     <View style={styles.wrap}>
-      <Text style={[type.channel, { color: colors.ink }]} accessibilityRole="header">
+      <Text style={[Design.typography.channel, { color: Design.color.ink }]} accessibilityRole="header">
         {name}
       </Text>
-      <Text style={[type.meta, styles.sub]} accessibilityLiveRegion="polite">
+      <Text style={[Design.typography.meta, styles.sub]} accessibilityLiveRegion="polite">
         {sub}
       </Text>
     </View>
@@ -16,5 +16,5 @@ export function ChannelHeader({ name, sub }: { name: string; sub: string }) {
 
 const styles = StyleSheet.create({
   wrap: { paddingTop: 12, paddingHorizontal: 20, paddingBottom: 24 },
-  sub: { color: colors.neutral700, marginTop: 8 },
+  sub: { color: Design.color.neutral700, marginTop: 8 },
 });

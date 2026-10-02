@@ -49,7 +49,7 @@ The state machine is a pure reducer shared by the app and the tests. Its inputs 
 
 ## 2. UX/UI decisions
 
-I matched the handoff's colours, type, spacing and copy exactly (tokens in `src/theme/tokens.ts`). These are the places where the design was silent or inconsistent, and what I decided:
+I matched the handoff's colours, type, spacing and copy exactly (tokens in the `Design` namespace, `src/theme/Design.ts`). These are the places where the design was silent or inconsistent, and what I decided:
 
 | # | Gap in the design | Decision |
 |---|---|---|

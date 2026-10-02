@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNow } from '@/hooks/useNow';
 import { MAX_CLIP_MS } from '@shared/protocol';
-import { colors, fonts, radii, type } from '@/theme/tokens';
+import { Design } from '@/theme/Design';
 import { duration } from '@/utils/format';
 
 export type PttState =
@@ -45,12 +45,12 @@ function Timer({ startedAt, color, warnColor }: { startedAt: number; color: stri
   const now = useNow(true, 250);
   const elapsed = now - startedAt;
   const warn = warnColor && MAX_CLIP_MS - elapsed <= 10_000;
-  return <Text style={[type.headline, styles.tabular, { color: warn ? warnColor : color }]}>{duration(elapsed)}</Text>;
+  return <Text style={[Design.typography.headline, styles.tabular, { color: warn ? warnColor : color }]}>{duration(elapsed)}</Text>;
 }
 
 export function PttButton({ state, onPressIn, onPressOut }: Props) {
-  let background: string = colors.ink;
-  let foreground: string = colors.ground;
+  let background: string = Design.color.ink;
+  let foreground: string = Design.color.ground;
   let extra: object | null = null;
   let content: React.ReactNode;
   let accessibilityText = 'Push to talk';
@@ -59,17 +59,17 @@ export function PttButton({ state, onPressIn, onPressOut }: Props) {
     case 'idle':
     case 'pending':
       if (state.kind === 'idle' && state.offline) {
-        background = colors.surface;
-        foreground = colors.ink;
+        background = Design.color.surface;
+        foreground = Design.color.ink;
         extra = styles.outlined;
       }
       content = (
         <>
-          <Text style={[type.caps, { color: foreground }]}>
+          <Text style={[Design.typography.caps, { color: foreground }]}>
             {state.kind === 'idle' && state.offline ? 'Sends when back online' : 'Push to talk'}
           </Text>
           <View style={styles.bottom}>
-            <Text style={[type.headline, { color: foreground }]}>{'Hold\nto talk'}</Text>
+            <Text style={[Design.typography.headline, { color: foreground }]}>{'Hold\nto talk'}</Text>
             <Mic size={32} color={foreground} strokeWidth={2} />
           </View>
         </>
@@ -77,59 +77,59 @@ export function PttButton({ state, onPressIn, onPressOut }: Props) {
       if (state.kind === 'pending') extra = { opacity: 0.88 };
       break;
     case 'live':
-      background = colors.live;
-      foreground = colors.liveText;
+      background = Design.color.live;
+      foreground = Design.color.liveText;
       extra = styles.ring;
       accessibilityText = "You're live";
       content = (
         <>
           <View style={styles.top}>
-            <Text style={[type.caps, { color: foreground }]}>On air</Text>
-            <Text style={[type.caps, { color: foreground }]}>{state.listeners} hear you</Text>
+            <Text style={[Design.typography.caps, { color: foreground }]}>On air</Text>
+            <Text style={[Design.typography.caps, { color: foreground }]}>{state.listeners} hear you</Text>
           </View>
           <LevelMeter level={state.level} bars={16} color={foreground} />
           <View style={styles.bottom}>
-            <Text style={[type.headline, { color: foreground }]}>{'You’re\nlive'}</Text>
-            <Timer startedAt={state.startedAt} color={foreground} warnColor={colors.weakText} />
+            <Text style={[Design.typography.headline, { color: foreground }]}>{'You’re\nlive'}</Text>
+            <Timer startedAt={state.startedAt} color={foreground} warnColor={Design.color.weakText} />
           </View>
         </>
       );
       break;
     case 'local':
-      background = colors.surface;
-      foreground = colors.ink;
+      background = Design.color.surface;
+      foreground = Design.color.ink;
       extra = styles.outlined;
       accessibilityText = 'Recording';
       content = (
         <>
           <View style={styles.top}>
-            <Text style={[type.caps, { color: foreground }]}>Recording</Text>
-            <Text style={[type.caps, { color: colors.neutral700 }]}>
+            <Text style={[Design.typography.caps, { color: foreground }]}>Recording</Text>
+            <Text style={[Design.typography.caps, { color: Design.color.neutral700 }]}>
               {state.offline ? 'Sends when back online' : 'Sends when complete'}
             </Text>
           </View>
           <LevelMeter level={state.level} bars={16} color={foreground} />
           <View style={styles.bottom}>
-            <Text style={[type.headline, { color: foreground }]}>{'Saving\nmessage'}</Text>
-            <Timer startedAt={state.startedAt} color={foreground} warnColor={colors.offline} />
+            <Text style={[Design.typography.headline, { color: foreground }]}>{'Saving\nmessage'}</Text>
+            <Timer startedAt={state.startedAt} color={foreground} warnColor={Design.color.offline} />
           </View>
         </>
       );
       break;
     case 'receiving':
-      background = colors.talkBg;
-      foreground = colors.talkText;
+      background = Design.color.talkBg;
+      foreground = Design.color.talkText;
       accessibilityText = `${state.name} is talking`;
       content = (
         <>
-          <Text style={[type.caps, { color: foreground }]}>Live</Text>
+          <Text style={[Design.typography.caps, { color: foreground }]}>Live</Text>
           <LevelMeter level={state.level} bars={12} color={foreground} />
           <View style={styles.bottom}>
             <View style={styles.flex}>
-              <Text style={[type.speaker, { color: foreground }]} numberOfLines={1}>
+              <Text style={[Design.typography.speaker, { color: foreground }]} numberOfLines={1}>
                 {state.name}
               </Text>
-              <Text style={[type.bodyStrong, styles.talking]}>is talking…</Text>
+              <Text style={[Design.typography.bodyStrong, styles.talking]}>is talking…</Text>
             </View>
             <Timer startedAt={state.startedAt} color={foreground} />
           </View>
@@ -137,15 +137,15 @@ export function PttButton({ state, onPressIn, onPressOut }: Props) {
       );
       break;
     case 'micOff':
-      background = colors.surface;
-      foreground = colors.ink;
+      background = Design.color.surface;
+      foreground = Design.color.ink;
       extra = styles.outlined;
       accessibilityText = 'Microphone off. Open settings to allow it';
       content = (
         <>
-          <Text style={[type.caps, { color: colors.neutral700 }]}>Microphone off</Text>
+          <Text style={[Design.typography.caps, { color: Design.color.neutral700 }]}>Microphone off</Text>
           <View style={styles.bottom}>
-            <Text style={[type.headline, { color: foreground }]}>{'Allow\nmicrophone'}</Text>
+            <Text style={[Design.typography.headline, { color: foreground }]}>{'Allow\nmicrophone'}</Text>
             <MicOff size={32} color={foreground} strokeWidth={2} />
           </View>
         </>
@@ -176,17 +176,17 @@ const styles = StyleSheet.create({
     height: 260,
     marginHorizontal: 10,
     marginBottom: 10,
-    borderRadius: radii.phone,
+    borderRadius: Design.radius.phone,
     padding: 22,
     justifyContent: 'space-between',
   },
-  outlined: { borderWidth: 2, borderColor: colors.neutral300 },
-  ring: { outlineWidth: 6, outlineStyle: 'solid', outlineColor: colors.liveRing },
+  outlined: { borderWidth: 2, borderColor: Design.color.neutral300 },
+  ring: { outlineWidth: 6, outlineStyle: 'solid', outlineColor: Design.color.liveRing },
   top: { flexDirection: 'row', justifyContent: 'space-between' },
   bottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
   meter: { flexDirection: 'row', alignItems: 'center', gap: 3, height: 40 },
   meterBar: { width: 4, borderRadius: 4 },
   tabular: { fontVariant: ['tabular-nums'] },
   flex: { flex: 1 },
-  talking: { color: colors.talkSecondary, fontFamily: fonts.semiBold, marginTop: 4 },
+  talking: { color: Design.color.talkSecondary, fontFamily: Design.fontFamily.semiBold, marginTop: 4 },
 });

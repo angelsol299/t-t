@@ -4,7 +4,7 @@ import { useNow } from '@/hooks/useNow';
 import { registry } from '@/services/registry';
 import { useAppSelector } from '@/store';
 import { selectRows, type Row } from '@/store/selectors';
-import { colors, type } from '@/theme/tokens';
+import { Design } from '@/theme/Design';
 import { MessageRow } from './MessageRow';
 
 // Newest at the bottom, like a chat: an inverted list starts at the newest
@@ -29,7 +29,7 @@ export function MessageList() {
   if (rows.length === 0) {
     return (
       <View style={styles.empty}>
-        <Text style={[type.meta, { color: colors.neutral700 }]}>No messages this shift yet</Text>
+        <Text style={[Design.typography.meta, { color: Design.color.neutral700 }]}>No messages this shift yet</Text>
       </View>
     );
   }
@@ -44,7 +44,7 @@ export function MessageList() {
       keyExtractor={(row) => row.id}
       style={styles.list}
       // Inverted, so the footer sits above the oldest row.
-      ListFooterComponent={<Text style={[type.caps, styles.section]}>This shift · recorded</Text>}
+      ListFooterComponent={<Text style={[Design.typography.caps, styles.section]}>This shift · recorded</Text>}
       renderItem={({ item }) => (
         <MessageRow
           row={item}
@@ -67,6 +67,6 @@ export function MessageList() {
 
 const styles = StyleSheet.create({
   list: { flex: 1 },
-  section: { color: colors.neutral700, paddingHorizontal: 20, paddingBottom: 10 },
+  section: { color: Design.color.neutral700, paddingHorizontal: 20, paddingBottom: 10 },
   empty: { flex: 1, justifyContent: 'flex-end', paddingHorizontal: 20, paddingBottom: 16 },
 });

@@ -15,7 +15,7 @@ import { Splash } from '@/components/Splash';
 import { createController } from '@/services/controller';
 import { registry } from '@/services/registry';
 import { store, useAppSelector } from '@/store';
-import { colors } from '@/theme/tokens';
+import { Design } from '@/theme/Design';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -73,7 +73,7 @@ function Root({ fontsLoaded }: { fontsLoaded: boolean }) {
       {/* Screens mount only once Archivo is registered: on iOS, text first drawn
           before its font loads keeps the system fallback until it re-renders. */}
       {fontsLoaded && (
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.ground }, animation: 'fade' }} />
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Design.color.ground }, animation: 'fade' }} />
       )}
       {showSplash && <Splash />}
     </>

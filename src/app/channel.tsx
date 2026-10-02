@@ -11,7 +11,7 @@ import { CHANNEL_NAME } from '@/config';
 import { registry } from '@/services/registry';
 import { useAppSelector } from '@/store';
 import { selectSavedCount } from '@/store/selectors';
-import { colors } from '@/theme/tokens';
+import { Design } from '@/theme/Design';
 
 /** 02–08: one screen; every state is driven by the store. */
 export default function Channel() {
@@ -68,5 +68,5 @@ export default function Channel() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.ground },
+  root: { flex: 1, backgroundColor: Design.color.ground },
 });
