@@ -1,21 +1,8 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Redirect } from 'expo-router';
+import { useAppSelector } from '@/store';
 
-export default function HomeScreen() {
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Teton Talk</Text>
-    </View>
-  );
+/** First launch asks for a name; later launches land on the channel. */
+export default function Index() {
+  const name = useAppSelector((s) => s.session.name);
+  return <Redirect href={name ? '/channel' : '/join'} />;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-  },
-});

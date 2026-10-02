@@ -1,0 +1,11 @@
+# Alternative to `brew install toxiproxy`. When using Docker, run the CLI with
+# UPSTREAM=host.docker.internal:3000 so the proxies can reach the server on the host.
+services:
+  toxiproxy:
+    image: ghcr.io/shopify/toxiproxy:2.12.0
+    ports:
+      - "8474:8474" # API
+      - "4000:4000" # app  -> server
+      - "4001:4001" # bots -> server
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

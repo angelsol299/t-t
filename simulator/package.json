@@ -1,0 +1,23 @@
+{
+  "name": "teton-talk-simulator",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "toxiproxy": "toxiproxy-server",
+    "sim": "tsx src/cli.ts",
+    "bots": "tsx src/bots.ts",
+    "samples": "sh scripts/make-samples.sh",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/ws": "^8.5.12",
+    "tsx": "^4.19.0",
+    "typescript": "~5.9.0",
+    "vitest": "^3.2.0"
+  }
+}
