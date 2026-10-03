@@ -1,12 +1,18 @@
 import { AudioLines, Check, Mic, Pause, Play, Trash2 } from 'lucide-react-native';
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNow } from '@/hooks/useNow';
 import { registry } from '@/services/registry';
 import { useAppSelector } from '@/store';
-import type { Row } from '@/store/selectors';
+import { makeSelectCurrentPlayback, type Row } from '@/store/selectors';
 import { Design } from '@/theme/Design';
 import { formatClockTime, formatDuration, formatSentAgo } from '@/utils/format';
+
+// One message in the list. Most rows read left to right:
+//
+//   [sender] [MISSED] [0:12] [Sent 2 min ago] [Cut short]    receipt   [delete] [play]
+//
+// On a weak link, my clip being uploaded shows as a progress bar instead (05).
 
 interface Props {
   row: Row;
@@ -14,7 +20,53 @@ interface Props {
   next: boolean; // next in the auto-play queue
 }
 
-function YouChip() {
+function MessageRowImpl({ row, playing, next }: Props) {
+  if (row.receipt.kind === 'sending' && row.receipt.percent !== null) {
+    return <UploadingRow row={row} percent={row.receipt.percent} />;
+  }
+
+  // Only my unsent clips can be deleted.
+  const deletable = row.receipt.kind === 'queued' || row.receipt.kind === 'failed';
+
+  return (
+    <View style={styles.row}>
+      <View style={styles.lead}>
+        <Sender row={row} />
+        {row.missed && <Tag text="MISSED" background={Design.color.offlineBg} foreground={Design.color.offline} caps />}
+        <LengthPill messageId={row.id} ms={row.durationMs} />
+        {row.late && <SentAgoTag at={row.at} />}
+        {row.cutShort && <Tag text="Cut short" background={Design.color.neutral200} foreground={Design.color.neutral700} />}
+      </View>
+      <Receipt row={row} next={next} />
+      {deletable && <DeleteButton clipId={row.id} />}
+      <PlayButton playing={playing} onPress={() => registry.controller?.togglePlay(row.id)} label={describeSender(row)} />
+    </View>
+  );
+}
+
+export const MessageRow = memo(MessageRowImpl);
+
+/** 05: my clip uploading on a weak link, with its progress. */
+function UploadingRow({ row, percent }: { row: Row; percent: number }) {
+  return (
+    <View style={styles.uploading} accessible accessibilityLabel={`${describeSender(row)}, sending ${percent} percent`}>
+      <View style={styles.uploadingHead}>
+        <Sender row={row} />
+        <Text style={styles.uploadingText}>Sending {percent}%</Text>
+      </View>
+      <View style={styles.bar}>
+        <View style={[styles.barFill, { width: `${Math.min(100, Math.max(0, percent))}%` }]} />
+      </View>
+    </View>
+  );
+}
+
+function describeSender(row: Row) {
+  return row.mine ? 'Your message' : `Message from ${row.name}`;
+}
+
+function Sender({ row }: { row: Row }) {
+  if (!row.mine) return <Text style={[Design.typography.rowStrong, { color: Design.color.ink }]}>{row.name}</Text>;
   return (
     <View style={styles.you}>
       <Mic size={14} color={Design.color.ink} strokeWidth={2} />
@@ -23,12 +75,46 @@ function YouChip() {
   );
 }
 
+/** The text after the tags: the time, "Heard by N", or how my unsent clip is doing. */
+function Receipt({ row, next }: { row: Row; next: boolean }) {
+  const time = formatClockTime(row.at);
+  switch (row.receipt.kind) {
+    case 'time':
+      return <Text style={styles.meta}>{next ? `Next · ${time}` : time}</Text>;
+    case 'heard': {
+      const { heardBy } = row.receipt;
+      if (heardBy === 0) return <Text style={styles.meta}>{time}</Text>;
+      return (
+        <View style={styles.metaRow}>
+          <Check size={14} color={Design.color.backText} strokeWidth={2.4} />
+          <Text style={styles.meta}>{`Heard by ${heardBy} · ${time}`}</Text>
+        </View>
+      );
+    }
+    case 'sending':
+      return <Text style={styles.meta}>Sending… · {time}</Text>;
+    case 'queued':
+      return <Tag text="Not sent yet" background={Design.color.offlineBg} foreground={Design.color.offline} />;
+    case 'failed':
+      return (
+        <Pressable
+          onPress={() => registry.controller?.retryClip(row.id)}
+          accessibilityRole="button"
+          accessibilityLabel="Not sent. Tap to retry"
+        >
+          <Tag text="Not sent · Retry" background={Design.color.offlineBg} foreground={Design.color.offline} />
+        </Pressable>
+      );
+  }
+}
+
 /** Clip length; while loaded in the player it doubles as the progress bar. */
 function LengthPill({ messageId, ms }: { messageId: string; ms: number }) {
   const lengthLabel = formatDuration(ms);
   // Only the row loaded in the player gets a value here, so only it re-renders
   // on the 100ms progress ticks.
-  const current = useAppSelector((state) => (state.playback.current?.messageId === messageId ? state.playback.current : null));
+  const selectCurrentPlayback = useMemo(() => makeSelectCurrentPlayback(messageId), [messageId]);
+  const current = useAppSelector(selectCurrentPlayback);
   const total = current?.durationMs || ms;
   const percent = current && total > 0 ? Math.min(100, (current.positionMs / total) * 100) : 0;
 
@@ -61,6 +147,20 @@ function Tag({ text, background, foreground, caps }: { text: string; background:
   );
 }
 
+function DeleteButton({ clipId }: { clipId: string }) {
+  return (
+    <Pressable
+      onPress={() => registry.controller?.deleteQueued(clipId)}
+      style={styles.delete}
+      accessibilityRole="button"
+      accessibilityLabel="Delete"
+      accessibilityHint="Deletes this unsent message"
+    >
+      <Trash2 size={16} color={Design.color.offline} strokeWidth={2} />
+    </Pressable>
+  );
+}
+
 function PlayButton({ playing, onPress, label }: { playing: boolean; onPress: () => void; label: string }) {
   return (
     <Pressable
@@ -86,107 +186,6 @@ function PlayButton({ playing, onPress, label }: { playing: boolean; onPress: ()
   );
 }
 
-function Bar({ percent, track, fill }: { percent: number; track: string; fill: string }) {
-  return (
-    <View style={[styles.bar, { backgroundColor: track }]}>
-      <View style={[styles.barFill, { width: `${Math.min(100, Math.max(0, percent))}%`, backgroundColor: fill }]} />
-    </View>
-  );
-}
-
-function MessageRowImpl({ row, playing, next }: Props) {
-  const sender = row.mine ? (
-    <YouChip />
-  ) : (
-    <Text style={[Design.typography.rowStrong, { color: Design.color.ink }]}>{row.name}</Text>
-  );
-  const senderDescription = row.mine ? 'Your message' : `Message from ${row.name}`;
-
-  // Weak signal upload: stacked row with progress (05).
-  if (row.receipt.kind === 'sending' && row.receipt.percent !== null) {
-    return (
-      <View style={styles.stack} accessible accessibilityLabel={`${senderDescription}, sending ${row.receipt.percent} percent`}>
-        <View style={styles.stackHead}>
-          {sender}
-          <Text
-            style={[
-              Design.typography.rowStrong,
-              styles.tabular,
-              { color: Design.color.weakText, fontFamily: Design.fontFamily.semiBold },
-            ]}
-          >
-            Sending {row.receipt.percent}%
-          </Text>
-        </View>
-        <Bar percent={row.receipt.percent} track={Design.color.weakBg} fill={Design.color.weakText} />
-      </View>
-    );
-  }
-
-  let meta: React.ReactNode;
-  switch (row.receipt.kind) {
-    case 'time':
-      meta = <Text style={styles.meta}>{next ? `Next · ${formatClockTime(row.at)}` : formatClockTime(row.at)}</Text>;
-      break;
-    case 'heard':
-      meta = (
-        <View style={styles.metaRow}>
-          {row.receipt.heardBy > 0 && <Check size={14} color={Design.color.backText} strokeWidth={2.4} />}
-          <Text style={styles.meta}>
-            {row.receipt.heardBy > 0 ? `Heard by ${row.receipt.heardBy} · ${formatClockTime(row.at)}` : formatClockTime(row.at)}
-          </Text>
-        </View>
-      );
-      break;
-    case 'sending':
-      meta = <Text style={styles.meta}>Sending… · {formatClockTime(row.at)}</Text>;
-      break;
-    case 'queued':
-      meta = <Tag text="Not sent yet" background={Design.color.offlineBg} foreground={Design.color.offline} />;
-      break;
-    case 'failed':
-      meta = (
-        <Pressable
-          onPress={() => registry.controller?.retryClip(row.id)}
-          accessibilityRole="button"
-          accessibilityLabel="Not sent. Tap to retry"
-        >
-          <Tag text="Not sent · Retry" background={Design.color.offlineBg} foreground={Design.color.offline} />
-        </Pressable>
-      );
-      break;
-  }
-
-  const deletable = row.pending && (row.receipt.kind === 'queued' || row.receipt.kind === 'failed');
-
-  return (
-    <View style={styles.row}>
-      <View style={styles.lead}>
-        {sender}
-        {row.missed && <Tag text="MISSED" background={Design.color.offlineBg} foreground={Design.color.offline} caps />}
-        <LengthPill messageId={row.id} ms={row.durationMs} />
-        {row.late && <SentAgoTag at={row.at} />}
-        {row.cutShort && <Tag text="Cut short" background={Design.color.neutral200} foreground={Design.color.neutral700} />}
-      </View>
-      {meta}
-      {deletable && (
-        <Pressable
-          onPress={() => registry.controller?.deleteQueued(row.id)}
-          style={styles.delete}
-          accessibilityRole="button"
-          accessibilityLabel="Delete"
-          accessibilityHint="Deletes this unsent message"
-        >
-          <Trash2 size={16} color={Design.color.offline} strokeWidth={2} />
-        </Pressable>
-      )}
-      <PlayButton playing={playing} onPress={() => registry.controller?.togglePlay(row.id)} label={senderDescription} />
-    </View>
-  );
-}
-
-export const MessageRow = memo(MessageRowImpl);
-
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
@@ -200,14 +199,22 @@ const styles = StyleSheet.create({
     borderTopColor: Design.color.neutral300,
   },
   lead: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: Design.space.small, flexWrap: 'wrap' },
-  stack: {
+  uploading: {
     gap: Design.space.small,
     paddingVertical: Design.space.medium,
     paddingHorizontal: Design.space.large,
     borderTopWidth: 1,
     borderTopColor: Design.color.neutral300,
   },
-  stackHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  uploadingHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  uploadingText: {
+    ...Design.typography.rowStrong,
+    fontFamily: Design.fontFamily.semiBold,
+    fontVariant: ['tabular-nums'],
+    color: Design.color.weakText,
+  },
+  bar: { height: 4, borderRadius: 4, overflow: 'hidden', backgroundColor: Design.color.weakBg },
+  barFill: { height: '100%', borderRadius: 4, backgroundColor: Design.color.weakText },
   you: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -245,7 +252,6 @@ const styles = StyleSheet.create({
   },
   meta: { ...Design.typography.row, color: Design.color.neutral700, fontVariant: ['tabular-nums'] },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: Design.space.xsmall },
-  tabular: { fontVariant: ['tabular-nums'] },
   // 36px visual, padded to a 44px hit area by the row padding + hitSlop
   play: {
     width: 36,
@@ -265,6 +271,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: -Design.space.small,
   },
-  bar: { height: 4, borderRadius: 4, overflow: 'hidden' },
-  barFill: { height: '100%', borderRadius: 4 },
 });

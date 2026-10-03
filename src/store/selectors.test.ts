@@ -1,7 +1,7 @@
 import type { RootState } from '@/store';
 import type { ChannelMessage } from '@shared/protocol';
 import { describe, expect, it } from 'vitest';
-import { selectPushToTalkState, selectRows, selectSubtitle } from './selectors';
+import { selectPushToTalkState, selectRows, selectSubtitle, selectTopBarNet } from './selectors';
 import connection from './slices/connection';
 import floor from './slices/floor';
 import messages from './slices/messages';
@@ -156,7 +156,7 @@ describe('selectRows', () => {
     });
     const rows = selectRows(state);
     expect(rows.map((row) => row.id)).toEqual(['message-1', 'older', 'newer']);
-    expect(rows[1]).toMatchObject({ mine: true, pending: true, receipt: { kind: 'sending', percent: null } });
+    expect(rows[1]).toMatchObject({ mine: true, receipt: { kind: 'sending', percent: null } });
     expect(rows[2].receipt).toEqual({ kind: 'failed' });
   });
 
@@ -180,5 +180,13 @@ describe('selectRows', () => {
       },
     });
     expect(selectRows(state).map((row) => row.id)).toEqual(['committed']);
+  });
+});
+
+describe('selectTopBarNet', () => {
+  it('shows no status before the first connection, unless offline', () => {
+    expect(selectTopBarNet(makeState({ connection: { everConnected: false, net: 'online' } }))).toBeUndefined();
+    expect(selectTopBarNet(makeState({ connection: { everConnected: false, net: 'offline' } }))).toBe('offline');
+    expect(selectTopBarNet(makeState({ connection: { everConnected: true, net: 'weak' } }))).toBe('weak');
   });
 });

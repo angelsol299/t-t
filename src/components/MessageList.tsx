@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { useAppSelector } from '@/store';
-import { selectRows, type Row } from '@/store/selectors';
+import { selectNextId, selectPlayingId, selectRows, type Row } from '@/store/selectors';
 import { Design } from '@/theme/Design';
 import { MessageRow } from './MessageRow';
 
@@ -10,9 +10,8 @@ import { MessageRow } from './MessageRow';
 
 export function MessageList() {
   const rows = useAppSelector(selectRows);
-  const playingId = useAppSelector((state) => (state.playback.current?.playing ? state.playback.current.messageId : null));
-  // "Next" only shows while something is playing.
-  const nextId = useAppSelector((state) => (state.playback.current?.playing ? (state.playback.queue[0] ?? null) : null));
+  const playingId = useAppSelector(selectPlayingId);
+  const nextId = useAppSelector(selectNextId);
   const newestFirst = useMemo(() => [...rows].reverse(), [rows]);
   const list = useRef<FlatList<Row>>(null);
 

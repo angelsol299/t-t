@@ -1,38 +1,36 @@
 import { ArrowRight, History } from 'lucide-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { NamePreview } from '@/components/NamePreview';
 import { TopBar } from '@/components/TopBar';
-import { CHANNEL_NAME, SERVER_URL } from '@/config';
+import { CHANNEL_NAME } from '@/config';
+import { useOnlineCount } from '@/hooks/useOnlineCount';
 import { registry } from '@/services/registry';
 import { useAppDispatch, useAppSelector } from '@/store';
+import { selectName } from '@/store/selectors';
 import { setName } from '@/store/slices/session';
 import { Design } from '@/theme/Design';
 
-/** 01: a name and a live preview of how others see you. */
+/**
+ * 01: a name and a live preview of how others see you.
+ * Opened with `?edit=1` (long-press the logo on the channel) to change the name later.
+ */
 export default function Join() {
-  const { edit } = useLocalSearchParams<{ edit?: string }>();
-  const saved = useAppSelector((state) => state.session.name);
-  const live = useAppSelector((state) => state.connection.online);
+  const isEditing = !!useLocalSearchParams<{ edit?: string }>().edit;
+  const savedName = useAppSelector(selectName);
   const dispatch = useAppDispatch();
-  const [name, setValue] = useState(edit ? (saved ?? '') : '');
-  const [online, setOnline] = useState<number | null>(edit ? live : null);
-  const trimmed = name.trim();
-
-  useEffect(() => {
-    if (edit) return;
-    fetch(`${SERVER_URL}/health`)
-      .then((response) => response.json())
-      .then((body: { online?: number }) => setOnline(body.online ?? null))
-      .catch(() => {});
-  }, [edit]);
+  const [draft, setDraft] = useState(isEditing ? (savedName ?? '') : '');
+  const online = useOnlineCount(isEditing);
+  const name = draft.trim();
+  const buttonLabel = isEditing ? 'Save name' : `Join ${CHANNEL_NAME}`;
 
   const submit = () => {
-    if (!trimmed) return;
-    dispatch(setName(trimmed));
-    if (edit) {
-      registry.controller?.reconnect();
+    if (!name) return;
+    dispatch(setName(name));
+    if (isEditing) {
+      registry.controller?.reconnect(); // so the server announces the new name
       router.back();
     } else {
       router.replace('/channel');
@@ -50,8 +48,8 @@ export default function Join() {
           <View style={styles.field}>
             <Text style={styles.label}>NAME</Text>
             <TextInput
-              value={name}
-              onChangeText={setValue}
+              value={draft}
+              onChangeText={setDraft}
               autoFocus
               autoCapitalize="words"
               autoCorrect={false}
@@ -66,17 +64,7 @@ export default function Join() {
               style={styles.input}
             />
           </View>
-          <View style={styles.preview} accessible accessibilityLabel={`Preview: ${trimmed || 'Your name'} is talking`}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{(trimmed[0] ?? '?').toUpperCase()}</Text>
-            </View>
-            <View style={styles.previewText}>
-              <Text style={[Design.typography.bodyStrong, { color: Design.color.ink }]} numberOfLines={1}>
-                {trimmed || 'Your name'} is talking…
-              </Text>
-              <Text style={[Design.typography.meta, { color: Design.color.neutral700 }]}>This is how others see you</Text>
-            </View>
-          </View>
+          <NamePreview name={name} />
           <View style={styles.spacer} />
           <View style={styles.foot}>
             <History size={16} color={Design.color.neutral700} strokeWidth={2} />
@@ -87,15 +75,13 @@ export default function Join() {
         </View>
         <Pressable
           onPress={submit}
-          disabled={!trimmed}
+          disabled={!name}
           accessibilityRole="button"
-          accessibilityLabel={edit ? 'Save name' : `Join ${CHANNEL_NAME}`}
-          accessibilityState={{ disabled: !trimmed }}
-          style={({ pressed }) => [styles.cta, { opacity: !trimmed ? 0.4 : pressed ? 0.9 : 1 }]}
+          accessibilityLabel={buttonLabel}
+          accessibilityState={{ disabled: !name }}
+          style={({ pressed }) => [styles.cta, { opacity: !name ? 0.4 : pressed ? 0.9 : 1 }]}
         >
-          <Text style={[Design.typography.cta, { color: Design.color.ground }]}>
-            {edit ? 'Save name' : `Join ${CHANNEL_NAME}`}
-          </Text>
+          <Text style={[Design.typography.cta, { color: Design.color.ground }]}>{buttonLabel}</Text>
           <View style={styles.ctaRight}>
             {online !== null && <Text style={styles.ctaOnline}>{online} online</Text>}
             <ArrowRight size={20} color={Design.color.ground} strokeWidth={2} />
@@ -132,17 +118,6 @@ const styles = StyleSheet.create({
     color: Design.color.neutral700,
   },
   input: { ...Design.typography.input, color: Design.color.ink, padding: 0, lineHeight: 33 },
-  preview: { flexDirection: 'row', alignItems: 'center', gap: Design.space.medium, paddingHorizontal: Design.space.xsmall },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Design.color.ink,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: { fontFamily: Design.fontFamily.bold, fontSize: Design.fontSize.small, color: Design.color.ground },
-  previewText: { flex: 1, gap: Design.space.xxsmall },
   spacer: { flex: 1 },
   foot: { flexDirection: 'row', alignItems: 'center', gap: Design.space.small },
   cta: {

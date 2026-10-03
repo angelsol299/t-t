@@ -8,23 +8,18 @@ import {
 } from '@expo-google-fonts/archivo';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { StatusBar } from 'react-native';
 import { Provider } from 'react-redux';
 import { Splash } from '@/components/Splash';
+import { useSplashVisible } from '@/hooks/useSplashVisible';
 import { createController } from '@/services/controller';
 import { registry } from '@/services/registry';
 import { store, useAppSelector } from '@/store';
+import { selectName } from '@/store/selectors';
 import { Design } from '@/theme/Design';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
-
-// The splash always shows for at least SPLASH_MIN_MS so the brand moment is
-// actually seen (fonts alone load in a few ms). It is held while the channel
-// connects, but never longer than SPLASH_MAX_MS: with no signal the app opens
-// in its offline state (recording still works).
-const SPLASH_MIN_MS = 1200;
-const SPLASH_MAX_MS = 2000;
 
 export default function RootLayout() {
   return (
@@ -42,19 +37,8 @@ function Root() {
     Archivo_700Bold,
     Archivo_800ExtraBold,
   });
-  const name = useAppSelector((state) => state.session.name);
-  const connected = useAppSelector((state) => state.connection.everConnected);
-  const [minElapsed, setMinElapsed] = useState(false);
-  const [timedOut, setTimedOut] = useState(false);
-
-  useEffect(() => {
-    const min = setTimeout(() => setMinElapsed(true), SPLASH_MIN_MS);
-    const max = setTimeout(() => setTimedOut(true), SPLASH_MAX_MS);
-    return () => {
-      clearTimeout(min);
-      clearTimeout(max);
-    };
-  }, []);
+  const name = useAppSelector(selectName);
+  const showSplash = useSplashVisible(fontsLoaded);
 
   useEffect(() => {
     // Our JS splash is pixel-identical ink, so swapping is invisible.
@@ -62,10 +46,9 @@ function Root() {
   }, [fontsLoaded]);
 
   useEffect(() => {
+    // The app's engine starts once we know who the user is.
     if (name && !registry.controller) void createController(store).start();
   }, [name]);
-
-  const showSplash = !fontsLoaded || !minElapsed || (!!name && !connected && !timedOut);
 
   return (
     <>

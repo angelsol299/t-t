@@ -1,6 +1,9 @@
 import { createSelector } from '@reduxjs/toolkit';
+import type { Net } from '@shared/netMachine';
 import { isLate } from '@shared/protocol';
 import type { RootState } from './index';
+import type { PlaybackState } from './slices/playback';
+import type { OutboxEntry } from './slices/outbox';
 
 // Everything the screens show is derived here from the store, so components
 // only render. Selectors built with createSelector return the same object until
@@ -26,7 +29,14 @@ export interface Row {
   late: boolean;
   missed: boolean;
   cutShort: boolean;
-  pending: boolean; // still in my outbox (deletable)
+}
+
+/** How one of my unsent clips is doing. */
+function unsentReceipt(entry: OutboxEntry, network: Net, linkUp: boolean): Receipt {
+  if (entry.status === 'failed') return { kind: 'failed' };
+  if (network === 'offline' || !linkUp) return { kind: 'queued' };
+  // The percentage is only worth showing when the upload is slow.
+  return { kind: 'sending', percent: network === 'weak' ? Math.round(entry.progress * 100) : null };
 }
 
 export const selectRows = createSelector(
@@ -51,28 +61,22 @@ export const selectRows = createSelector(
       late: isLate(message),
       missed: missed.includes(message.id),
       cutShort: false,
-      pending: false,
     }));
     // My unsent clips sit at the bottom in the order I recorded them.
     const unsent = Object.values(outbox)
       .filter((entry) => entry.status !== 'recording' && !committed.has(entry.clipId))
       .sort((first, second) => first.recordedAt - second.recordedAt);
     for (const entry of unsent) {
-      let receipt: Receipt;
-      if (entry.status === 'failed') receipt = { kind: 'failed' };
-      else if (network === 'offline' || !linkUp) receipt = { kind: 'queued' };
-      else receipt = { kind: 'sending', percent: network === 'weak' ? Math.round(entry.progress * 100) : null };
       rows.push({
         id: entry.clipId,
         mine: true,
         name: 'You',
         durationMs: entry.durationMs,
         at: entry.recordedAt - serverOffset,
-        receipt,
+        receipt: unsentReceipt(entry, network, linkUp),
         late: false,
         missed: false,
         cutShort: !!entry.cutShort,
-        pending: true,
       });
     }
     return rows;
@@ -82,7 +86,17 @@ export const selectRows = createSelector(
 export const selectSavedCount = (state: RootState) =>
   Object.values(state.outbox.items).filter((entry) => entry.status !== 'recording').length;
 
+/** The message playing right now, if any. */
+export const selectPlayingId = (state: RootState) => (state.playback.current?.playing ? state.playback.current.messageId : null);
+
+/** The message that auto-plays next. Only shown while something is playing. */
+export const selectNextId = (state: RootState) => (state.playback.current?.playing ? (state.playback.queue[0] ?? null) : null);
+
 // ── channel screen ───────────────────────────────────────────────────────────
+
+/** The network status in the top bar. Hidden until the first connection rather than a misleading "Online". */
+export const selectTopBarNet = (state: RootState): Net | undefined =>
+  state.connection.everConnected || state.connection.net === 'offline' ? state.connection.net : undefined;
 
 /** Everyone online except me. */
 const selectListeners = (state: RootState) => Math.max(0, state.connection.online - 1);
@@ -124,3 +138,24 @@ export function selectSubtitle(state: RootState): string {
   if (floor.myTalk?.mode === 'live') return `Live to ${selectListeners(state)}`;
   return connection.everConnected ? `${connection.online} online` : 'Connecting…';
 }
+
+export const selectNet = (state: RootState) => state.connection.net;
+export const selectOfflineSince = (state: RootState) => state.connection.offlineSince;
+export const selectNextRetryAt = (state: RootState) => state.connection.nextRetryAt;
+export const selectMissedOnReturn = (state: RootState) => state.connection.missedOnReturn;
+export const selectOnline = (state: RootState) => state.connection.online;
+export const selectEverConnected = (state: RootState) => state.connection.everConnected;
+
+export const selectLostRaceTo = (state: RootState) => state.floor.lostRaceTo;
+export const selectHolding = (state: RootState) => state.floor.holding;
+
+/** The signed-in person's display name, or null before they've joined. */
+export const selectName = (state: RootState) => state.session.name;
+export const selectHasName = (state: RootState) => !!state.session.name;
+
+/** The playback slot for `messageId`, or null when something else (or nothing) is loaded. */
+export const makeSelectCurrentPlayback = (messageId: string) =>
+  createSelector(
+    (state: RootState) => state.playback.current,
+    (current): PlaybackState['current'] => (current?.messageId === messageId ? current : null),
+  );

@@ -10,7 +10,18 @@ import { TopBar } from '@/components/TopBar';
 import { CHANNEL_NAME } from '@/config';
 import { registry } from '@/services/registry';
 import { useAppSelector } from '@/store';
-import { selectPushToTalkState, selectSavedCount, selectSubtitle } from '@/store/selectors';
+import {
+  selectHolding,
+  selectLostRaceTo,
+  selectMissedOnReturn,
+  selectNet,
+  selectNextRetryAt,
+  selectOfflineSince,
+  selectPushToTalkState,
+  selectSavedCount,
+  selectSubtitle,
+  selectTopBarNet,
+} from '@/store/selectors';
 import { Design } from '@/theme/Design';
 
 /**
@@ -33,19 +44,16 @@ export default function Channel() {
 }
 
 function ChannelTopBar() {
-  const network = useAppSelector((state) => state.connection.net);
-  const everConnected = useAppSelector((state) => state.connection.everConnected);
-  // Until the first connection, show no status rather than a misleading "Online".
-  const showStatus = everConnected || network === 'offline';
-  return <TopBar net={showStatus ? network : undefined} onLongPressBrand={() => router.push('/join?edit=1')} />;
+  const network = useAppSelector(selectTopBarNet);
+  return <TopBar net={network} onLongPressBrand={() => router.push('/join?edit=1')} />;
 }
 
 /** The weak / offline / back-online band under the header, if any. */
 function ConnectionBand() {
-  const network = useAppSelector((state) => state.connection.net);
-  const offlineSince = useAppSelector((state) => state.connection.offlineSince);
-  const nextRetryAt = useAppSelector((state) => state.connection.nextRetryAt);
-  const missedOnReturn = useAppSelector((state) => state.connection.missedOnReturn);
+  const network = useAppSelector(selectNet);
+  const offlineSince = useAppSelector(selectOfflineSince);
+  const nextRetryAt = useAppSelector(selectNextRetryAt);
+  const missedOnReturn = useAppSelector(selectMissedOnReturn);
   const saved = useAppSelector(selectSavedCount);
 
   if (network === 'weak') return <WeakBand />;
@@ -62,8 +70,8 @@ function ConnectionBand() {
 
 /** 08: only while I'm still holding after losing a simultaneous-press race. */
 function LostRaceCard() {
-  const lostRaceTo = useAppSelector((state) => state.floor.lostRaceTo);
-  const holding = useAppSelector((state) => state.floor.holding);
+  const lostRaceTo = useAppSelector(selectLostRaceTo);
+  const holding = useAppSelector(selectHolding);
   return lostRaceTo && holding ? <FloorDeniedCard name={lostRaceTo.name} /> : null;
 }
 
