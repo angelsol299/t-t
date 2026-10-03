@@ -62,16 +62,6 @@ export function openDatabase(dataDirectory: string) {
     );
   `);
 
-  // Databases created before these columns were renamed keep their data.
-  function renameColumnIfPresent(table: string, oldName: string, newName: string) {
-    const columns = database.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
-    if (columns.some((column) => column.name === oldName)) {
-      database.exec(`ALTER TABLE ${table} RENAME COLUMN ${oldName} TO ${newName}`);
-    }
-  }
-  renameColumnIfPresent('messages', 'duration_ms', 'duration_milliseconds');
-  renameColumnIfPresent('receipts', 'msg_id', 'message_id');
-
   const insertMessage = database.prepare(`
     INSERT OR IGNORE INTO messages (id, sender_id, sender_name, duration_milliseconds, recorded_at, committed_at)
     VALUES (:id, :senderId, :senderName, :durationMilliseconds, :recordedAt, :committedAt)`);

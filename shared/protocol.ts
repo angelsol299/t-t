@@ -55,6 +55,7 @@ export type ServerMessage =
   | { type: 'pong'; sentAt: number; serverTime: number };
 
 // HTTP API (resumable upload + history)
+//   GET  /health                            -> { ok: true, online: number }
 //   GET  /messages?since=<seq>              -> { messages: ChannelMessage[] }
 //   PUT  /clips/:id/chunks/:seq             body: µ-law bytes        -> { ok: true }
 //   GET  /clips/:id                         -> { received: number[], committed: boolean }

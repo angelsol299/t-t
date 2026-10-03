@@ -18,22 +18,14 @@ export interface Sender {
 }
 
 export function createMessages(database: Database, clipStore: ClipStore, clients: Clients, log: (...details: unknown[]) => void) {
-  // For each clip still uploading: the chunks that have arrived, and the
-  // highest chunk index with no gaps before it (what we acknowledge to the sender).
-  const uploads = new Map<string, { receivedChunks: Set<number>; highestContiguousChunk: number }>();
-
-  /** Saves one chunk. Returns the highest chunk index received with no gaps before it. */
+  /**
+   * Saves one chunk. Returns the highest chunk index received with no gaps
+   * before it. The disk is the only record of what arrived, so this stays
+   * correct across server restarts.
+   */
   function saveChunk(clipId: string, chunkIndex: number, audio: Uint8Array): number {
     clipStore.saveChunk(clipId, chunkIndex, audio);
-    let upload = uploads.get(clipId);
-    if (!upload) {
-      // Start from what is on disk, so acknowledgements stay correct after a server restart.
-      upload = { receivedChunks: new Set(clipStore.receivedChunks(clipId)), highestContiguousChunk: -1 };
-      uploads.set(clipId, upload);
-    }
-    upload.receivedChunks.add(chunkIndex);
-    while (upload.receivedChunks.has(upload.highestContiguousChunk + 1)) upload.highestContiguousChunk++;
-    return upload.highestContiguousChunk;
+    return clipStore.highestContiguousChunk(clipId);
   }
 
   /** The only way a message comes into existence. Safe to call any number of times. */
@@ -54,7 +46,6 @@ export function createMessages(database: Database, clipStore: ClipStore, clients
       recordedAt: Math.min(completion.recordedAt, now), // a phone clock can't put a clip in the future
       committedAt: now,
     });
-    uploads.delete(clipId);
 
     if (created) {
       log(`commit #${message.seq} ${sender.name} ${message.durationMs}ms${isLate(message) ? ' (late)' : ''}`);

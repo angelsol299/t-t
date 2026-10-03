@@ -18,10 +18,16 @@ export function createClipStore(dataDirectory: string) {
   const clipsDirectory = path.join(dataDirectory, 'clips');
   fileSystem.mkdirSync(clipsDirectory, { recursive: true });
 
-  const chunksDirectory = (clipId: string) => path.join(clipsDirectory, clipId);
+  // Every path goes through here. Checking the id keeps a crafted one like
+  // "../../x" from reaching outside the data directory.
+  function clipPath(clipId: string, fileName: string) {
+    if (!isClipId(clipId)) throw new Error(`invalid clip id: ${clipId}`);
+    return path.join(clipsDirectory, fileName);
+  }
+  const chunksDirectory = (clipId: string) => clipPath(clipId, clipId);
   const chunkFile = (clipId: string, chunkIndex: number) =>
     path.join(chunksDirectory(clipId), `${chunkIndex}${MULAW_FILE_EXTENSION}`);
-  const wholeClipFile = (clipId: string) => path.join(clipsDirectory, `${clipId}${MULAW_FILE_EXTENSION}`);
+  const wholeClipFile = (clipId: string) => clipPath(clipId, `${clipId}${MULAW_FILE_EXTENSION}`);
 
   /** Indexes of the chunks on disk, in ascending order. */
   function receivedChunks(clipId: string): number[] {
@@ -43,6 +49,13 @@ export function createClipStore(dataDirectory: string) {
       fileSystem.renameSync(temporaryPath, finalPath);
     },
     receivedChunks,
+    /** The highest chunk index with no gaps before it (what we acknowledge to the sender), or -1. */
+    highestContiguousChunk(clipId: string): number {
+      const received = new Set(receivedChunks(clipId));
+      let highest = -1;
+      while (received.has(highest + 1)) highest++;
+      return highest;
+    },
     /** Indexes from 0 to totalChunks - 1 that are not on disk yet. */
     missingChunks(clipId: string, totalChunks: number): number[] {
       const received = new Set(receivedChunks(clipId));

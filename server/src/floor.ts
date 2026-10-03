@@ -7,7 +7,10 @@ import { FLOOR_LEASE_MS, type FloorFreeReason, type Speaker } from '../../shared
 
 const LEASE_CHECK_INTERVAL_MILLISECONDS = 250;
 
-export type FloorRequestResult = { granted: true; holder: Speaker } | { granted: false; holder: Speaker };
+export interface FloorRequestResult {
+  granted: boolean;
+  holder: Speaker; // whoever holds the floor now: the requester if granted
+}
 
 export function createFloor(onFree: (previousHolder: Speaker, reason: FloorFreeReason) => void) {
   let holder: Speaker | null = null;

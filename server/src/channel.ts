@@ -102,7 +102,15 @@ export function createChannel(clients: Clients, messages: Messages, log: (...det
 
   return {
     attach(socket: WebSocket) {
-      socket.on('message', (data, isBinary) => (isBinary ? onBinary(socket, data) : onText(socket, data.toString())));
+      socket.on('message', (data, isBinary) => {
+        // One malformed message must not take the server down for everyone.
+        try {
+          if (isBinary) onBinary(socket, data);
+          else onText(socket, data.toString());
+        } catch (error) {
+          log('ignored a bad message:', error instanceof Error ? error.message : error);
+        }
+      });
       socket.on('close', () => onClose(socket));
     },
     close() {
