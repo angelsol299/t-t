@@ -1,7 +1,7 @@
 import { SERVER_URL } from '@/config';
 import type { AppDispatch, RootState } from '@/store';
 import { outboxActions, type OutboxEntry } from '@/store/slices/outbox';
-import type { ChannelMessage, ClipComplete } from '@shared/protocol';
+import { CHUNK_MS, type ChannelMessage, type ClipComplete } from '@shared/protocol';
 import { outboxStore, type OutboxItem } from './db';
 import { clipFiles } from './files';
 
@@ -70,7 +70,8 @@ export function createOutbox({ dispatch, getState, onCommitted }: OutboxDependen
   async function upload(item: OutboxEntry) {
     const total = item.total!;
     const response = await request(`/clips/${item.clipId}`);
-    if (!response.ok) throw response.status >= 500 ? new Error(`status ${response.status}`) : new Permanent(`status ${response.status}`);
+    if (!response.ok)
+      throw response.status >= 500 ? new Error(`status ${response.status}`) : new Permanent(`status ${response.status}`);
     const { received } = (await response.json()) as { received: number[] };
     const receivedChunks = new Set(received);
     patch(item.clipId, { status: 'sending', progress: receivedChunks.size / total });
@@ -149,7 +150,7 @@ export function createOutbox({ dispatch, getState, onCommitted }: OutboxDependen
             drop(item.clipId);
             continue;
           }
-          save({ ...item, status: 'queued', total, durationMs: total * 250, cutShort: true });
+          save({ ...item, status: 'queued', total, durationMs: total * CHUNK_MS, cutShort: true });
         } else {
           save(item.status === 'sending' ? { ...item, status: 'queued' } : item);
         }
@@ -161,14 +162,21 @@ export function createOutbox({ dispatch, getState, onCommitted }: OutboxDependen
     finish(clipId: string, total: number, durationMs: number) {
       patch(clipId, { status: 'queued', total, durationMs });
     },
-    acked(clipId: string, upTo: number) {
+    /** The server confirmed live chunks up to `upTo`: shows as upload progress. */
+    markAcknowledged(clipId: string, upTo: number) {
       const currentPlayback = getState().outbox.items[clipId];
       if (currentPlayback && upTo > currentPlayback.ackedUpTo) {
-        dispatch(outboxActions.patch({ clipId, ackedUpTo: upTo, progress: currentPlayback.total ? (upTo + 1) / currentPlayback.total : 0 }));
+        dispatch(
+          outboxActions.patch({
+            clipId,
+            ackedUpTo: upTo,
+            progress: currentPlayback.total ? (upTo + 1) / currentPlayback.total : 0,
+          }),
+        );
       }
     },
     /** The server committed it (via the live path or an upload). */
-    committed(clipId: string) {
+    markCommitted(clipId: string) {
       if (getState().outbox.items[clipId]) drop(clipId);
     },
     discard(clipId: string) {
@@ -179,9 +187,9 @@ export function createOutbox({ dispatch, getState, onCommitted }: OutboxDependen
       patch(clipId, { status: 'queued', attempts: 0, error: undefined });
       void flushOutbox();
     },
-    kick: flushOutbox,
+    flush: flushOutbox,
     /** Link came back: retry now instead of waiting out the backoff. */
-    kickNow() {
+    flushNow() {
       if (retryTimer) clearTimeout(retryTimer);
       retryTimer = null;
       void flushOutbox();

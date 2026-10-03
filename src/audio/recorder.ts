@@ -1,6 +1,6 @@
 import { AudioManager, AudioRecorder } from 'react-native-audio-api';
 import { CHUNK_SAMPLES, SAMPLE_RATE } from '@shared/protocol';
-import { encodeFloat, resample, rootMeanSquare } from '@shared/mulaw';
+import { encodeFloat, meterLevel, resample, rootMeanSquare } from '@shared/mulaw';
 import { setupSession } from './context';
 
 // Mic → 8kHz µ-law chunks of CHUNK_MS. The device may not honour the requested
@@ -52,7 +52,7 @@ export async function startRecording(recordingHandlers: RecordingHandlers): Prom
     const now = Date.now();
     if (now - lastLevelAt > 90) {
       lastLevelAt = now;
-      handlers.onLevel(Math.min(1, rootMeanSquare(data) * 4));
+      handlers.onLevel(meterLevel(rootMeanSquare(data)));
     }
     pending = append(pending, resample(data, buffer.sampleRate, SAMPLE_RATE));
     while (pending.length >= CHUNK_SAMPLES) {

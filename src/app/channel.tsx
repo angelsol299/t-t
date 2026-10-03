@@ -4,66 +4,77 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChannelHeader } from '@/components/ChannelHeader';
 import { FloorDeniedCard } from '@/components/FloorDeniedCard';
 import { MessageList } from '@/components/MessageList';
-import { PttButton, type PttState } from '@/components/PttButton';
+import { PttButton } from '@/components/PttButton';
 import { BackOnlineBand, OfflineBand, WeakBand } from '@/components/StatusBand';
 import { TopBar } from '@/components/TopBar';
 import { CHANNEL_NAME } from '@/config';
 import { registry } from '@/services/registry';
 import { useAppSelector } from '@/store';
-import { selectSavedCount } from '@/store/selectors';
+import { selectPushToTalkState, selectSavedCount, selectSubtitle } from '@/store/selectors';
 import { Design } from '@/theme/Design';
 
-/** 02–08: one screen; every state is driven by the store. */
+/**
+ * 02–08: one screen; every state is driven by the store.
+ * Each part below reads only the store values it shows, so a change (for
+ * example the voice level, about 11 times a second) re-renders only that part.
+ */
 export default function Channel() {
-  const connection = useAppSelector((state) => state.connection);
-  const floor = useAppSelector((state) => state.floor);
-  const offset = useAppSelector((state) => state.session.serverOffset);
-  const saved = useAppSelector(selectSavedCount);
-
-  const offline = connection.net === 'offline';
-  const listeners = Math.max(0, connection.online - 1);
-
-  let subtitle = connection.everConnected ? `${connection.online} online` : 'Connecting…';
-  if (floor.my?.mode === 'live') subtitle = `Live to ${listeners}`;
-  if (offline) subtitle = `${connection.onlineAtDrop ?? connection.online} online when you lost signal`;
-  if (floor.notice) subtitle = floor.notice;
-
-  let ptt: PttState;
-  if (floor.micDenied) ptt = { kind: 'micOff' };
-  else if (floor.my?.mode === 'live')
-    ptt = { kind: 'live', startedAt: floor.my.startedAt, listeners, level: floor.level };
-  else if (floor.my?.mode === 'local')
-    ptt = { kind: 'local', startedAt: floor.my.startedAt, level: floor.level, offline };
-  else if (floor.my?.mode === 'pending') ptt = { kind: 'pending' };
-  else if (floor.speaker)
-    ptt = {
-      kind: 'receiving',
-      name: floor.speaker.name,
-      startedAt: floor.speaker.startedAt - offset,
-      level: floor.level,
-    };
-  else ptt = { kind: 'idle', offline };
-
+  const subtitle = useAppSelector(selectSubtitle);
   return (
     <SafeAreaView style={styles.root} edges={['top', 'bottom', 'left', 'right']}>
-      <TopBar net={connection.everConnected || offline ? connection.net : undefined} onLongPressBrand={() => router.push('/join?edit=1')} />
-      <ChannelHeader name={CHANNEL_NAME} sub={subtitle} />
-      {connection.net === 'weak' && <WeakBand />}
-      {offline && connection.offlineSince !== null && (
-        <OfflineBand
-          since={connection.offlineSince}
-          saved={saved}
-          nextRetryAt={connection.nextRetryAt}
-          onRetry={() => registry.controller?.retryNow()}
-        />
-      )}
-      {connection.net === 'recovering' && (
-        <BackOnlineBand missed={connection.missedOnReturn ?? 0} onReplay={() => registry.controller?.replayAll()} />
-      )}
+      <ChannelTopBar />
+      <ChannelHeader name={CHANNEL_NAME} subtitle={subtitle} />
+      <ConnectionBand />
       <MessageList />
-      {floor.denied && floor.holding && <FloorDeniedCard name={floor.denied.name} />}
-      <PttButton state={ptt} onPressIn={() => registry.controller?.pressIn()} onPressOut={() => registry.controller?.pressOut()} />
+      <LostRaceCard />
+      <PushToTalk />
     </SafeAreaView>
+  );
+}
+
+function ChannelTopBar() {
+  const network = useAppSelector((state) => state.connection.net);
+  const everConnected = useAppSelector((state) => state.connection.everConnected);
+  // Until the first connection, show no status rather than a misleading "Online".
+  const showStatus = everConnected || network === 'offline';
+  return <TopBar net={showStatus ? network : undefined} onLongPressBrand={() => router.push('/join?edit=1')} />;
+}
+
+/** The weak / offline / back-online band under the header, if any. */
+function ConnectionBand() {
+  const network = useAppSelector((state) => state.connection.net);
+  const offlineSince = useAppSelector((state) => state.connection.offlineSince);
+  const nextRetryAt = useAppSelector((state) => state.connection.nextRetryAt);
+  const missedOnReturn = useAppSelector((state) => state.connection.missedOnReturn);
+  const saved = useAppSelector(selectSavedCount);
+
+  if (network === 'weak') return <WeakBand />;
+  if (network === 'offline' && offlineSince !== null) {
+    return (
+      <OfflineBand since={offlineSince} saved={saved} nextRetryAt={nextRetryAt} onRetry={() => registry.controller?.retryNow()} />
+    );
+  }
+  if (network === 'recovering') {
+    return <BackOnlineBand missed={missedOnReturn ?? 0} onReplay={() => registry.controller?.replayAll()} />;
+  }
+  return null;
+}
+
+/** 08: only while I'm still holding after losing a simultaneous-press race. */
+function LostRaceCard() {
+  const lostRaceTo = useAppSelector((state) => state.floor.lostRaceTo);
+  const holding = useAppSelector((state) => state.floor.holding);
+  return lostRaceTo && holding ? <FloorDeniedCard name={lostRaceTo.name} /> : null;
+}
+
+function PushToTalk() {
+  const state = useAppSelector(selectPushToTalkState);
+  return (
+    <PttButton
+      state={state}
+      onPressIn={() => registry.controller?.pressIn()}
+      onPressOut={() => registry.controller?.pressOut()}
+    />
   );
 }
 

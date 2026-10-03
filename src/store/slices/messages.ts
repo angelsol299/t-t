@@ -1,26 +1,17 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import { messageCache } from '@/services/db';
 import type { ChannelMessage } from '@shared/protocol';
 
-const SHIFT_MS = 12 * 60 * 60 * 1000;
-
-// The committed message list, ordered by server seq. It starts from SQLite (so
-// the list is there instantly, even offline) and is then kept current by socket
-// events, which the controller dispatches. The store's listener middleware
-// writes changes back to SQLite.
+// The committed message list, ordered by server seq. It is loaded from SQLite
+// at launch (so the list is there instantly, even offline) and then kept
+// current by socket events. Saving is in store/persistence.ts.
 
 export interface MessagesState {
   list: ChannelMessage[];
 }
 
-function load(): MessagesState {
-  messageCache.prune(Date.now() - SHIFT_MS);
-  return { list: messageCache.load() };
-}
-
 const messages = createSlice({
   name: 'messages',
-  initialState: load,
+  initialState: { list: [] } as MessagesState,
   reducers: {
     upsertMessages(state, action: PayloadAction<ChannelMessage[]>) {
       for (const message of action.payload) {

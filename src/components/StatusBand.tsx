@@ -3,7 +3,7 @@ import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { RECEPTION_PHONE } from '@/config';
 import { useNow } from '@/hooks/useNow';
 import { Design } from '@/theme/Design';
-import { duration } from '@/utils/format';
+import { formatDuration } from '@/utils/format';
 
 export function WeakBand() {
   return (
@@ -39,7 +39,7 @@ interface OfflineProps {
 export function OfflineBand({ since, saved, nextRetryAt, onRetry }: OfflineProps) {
   const now = useNow(true, 500);
   const retryIn = nextRetryAt ? Math.max(0, Math.ceil((nextRetryAt - now) / 1000)) : null;
-  const title = `Offline for ${duration(now - since)}${saved > 0 ? ` — ${saved} saved` : ''}`;
+  const title = `Offline for ${formatDuration(now - since)}${saved > 0 ? ` — ${saved} saved` : ''}`;
   return (
     <View style={[styles.band, styles.offline]} accessibilityLiveRegion="polite">
       <View style={styles.offlineTop}>
@@ -84,8 +84,19 @@ const styles = StyleSheet.create({
     borderRadius: Design.radius.card,
   },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 0, minHeight: 44 },
-  ghost: { flexDirection: 'row', alignItems: 'center', gap: Design.space.xsmall, minHeight: Design.layout.minimumTouchTarget, paddingHorizontal: Design.space.xsmall },
-  offline: { backgroundColor: Design.color.offlineBg, paddingTop: Design.space.medium, paddingBottom: Design.space.regular, gap: Design.space.medium },
+  ghost: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Design.space.xsmall,
+    minHeight: Design.layout.minimumTouchTarget,
+    paddingHorizontal: Design.space.xsmall,
+  },
+  offline: {
+    backgroundColor: Design.color.offlineBg,
+    paddingTop: Design.space.medium,
+    paddingBottom: Design.space.regular,
+    gap: Design.space.medium,
+  },
   offlineTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: Design.space.medium },
   offlineText: { flex: 1, gap: Design.space.xxsmall },
   retry: { flexDirection: 'row', alignItems: 'center', gap: Design.space.xsmall },

@@ -3,19 +3,27 @@ import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { useNow } from '@/hooks/useNow';
 import { registry } from '@/services/registry';
 import { useAppSelector } from '@/store';
-import { selectRows, type Row } from '@/store/selectors';
+import { selectNowPlaying, selectRows, type Row } from '@/store/selectors';
 import { Design } from '@/theme/Design';
-import { MessageRow } from './MessageRow';
+import { IDLE_PLAY_STATE, MessageRow, NEXT_PLAY_STATE, type RowPlayState } from './MessageRow';
 
 // Newest at the bottom, like a chat: an inverted list starts at the newest
 // row and stays put when you scroll up to replay an older clip.
 
 export function MessageList() {
   const rows = useAppSelector(selectRows);
-  const playback = useAppSelector((state) => state.playback);
-  const now = useNow(rows.some((row) => row.late), 30_000);
+  const nowPlaying = useAppSelector(selectNowPlaying);
+  const now = useNow(
+    rows.some((row) => row.late),
+    30_000,
+  );
   const newestFirst = useMemo(() => [...rows].reverse(), [rows]);
   const list = useRef<FlatList<Row>>(null);
+  // One object for the row in the player, so memo() still skips the other rows.
+  const currentPlayState = useMemo<RowPlayState>(
+    () => ({ current: true, playing: nowPlaying.playing, durationMs: nowPlaying.durationMs, next: false }),
+    [nowPlaying.playing, nowPlaying.durationMs],
+  );
 
   const onPlay = useCallback((id: string) => registry.controller?.togglePlay(id), []);
   const onDelete = useCallback((id: string) => registry.controller?.deleteQueued(id), []);
@@ -34,7 +42,11 @@ export function MessageList() {
     );
   }
 
-  const nextId = playback.current?.playing ? playback.queue[0] : undefined;
+  const playStateFor = (messageId: string): RowPlayState => {
+    if (messageId === nowPlaying.messageId) return currentPlayState;
+    if (messageId === nowPlaying.nextMessageId) return NEXT_PLAY_STATE;
+    return IDLE_PLAY_STATE;
+  };
 
   return (
     <FlatList
@@ -46,20 +58,7 @@ export function MessageList() {
       // Inverted, so the footer sits above the oldest row.
       ListFooterComponent={<Text style={[Design.typography.caps, styles.section]}>This shift · recorded</Text>}
       renderItem={({ item }) => (
-        <MessageRow
-          row={item}
-          now={now}
-          play={{
-            current: playback.current?.messageId === item.id,
-            playing: playback.current?.messageId === item.id && playback.current.playing,
-            positionMs: playback.current?.messageId === item.id ? playback.current.positionMs : 0,
-            durationMs: playback.current?.messageId === item.id ? playback.current.durationMs : 0,
-            next: nextId === item.id,
-          }}
-          onPlay={onPlay}
-          onDelete={onDelete}
-          onRetry={onRetry}
-        />
+        <MessageRow row={item} now={now} play={playStateFor(item.id)} onPlay={onPlay} onDelete={onDelete} onRetry={onRetry} />
       )}
     />
   );

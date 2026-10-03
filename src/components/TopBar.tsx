@@ -12,11 +12,25 @@ interface Status {
   text: string;
 }
 
+const ONLINE: Status = {
+  label: 'Online',
+  dot: Design.color.live,
+  halo: Design.color.liveHalo,
+  haloWidth: 4,
+  text: Design.color.ink,
+};
+
 const STATUS: Record<Net, Status> = {
-  online: { label: 'Online', dot: Design.color.live, halo: Design.color.liveHalo, haloWidth: 4, text: Design.color.ink },
-  recovering: { label: 'Online', dot: Design.color.live, halo: Design.color.liveHalo, haloWidth: 4, text: Design.color.ink },
+  online: ONLINE,
+  recovering: ONLINE, // the green "Back online" band says the rest
   weak: { label: 'Weak', dot: Design.color.weakDot, halo: Design.color.weakBg, haloWidth: 3, text: Design.color.weakText },
-  offline: { label: 'Offline', dot: Design.color.offline, halo: Design.color.offlineBg, haloWidth: 4, text: Design.color.neutral700 },
+  offline: {
+    label: 'Offline',
+    dot: Design.color.offline,
+    halo: Design.color.offlineBg,
+    haloWidth: 4,
+    text: Design.color.neutral700,
+  },
 };
 
 const DOT = 8;

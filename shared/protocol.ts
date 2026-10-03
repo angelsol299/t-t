@@ -4,6 +4,11 @@
 export const SAMPLE_RATE = 8000; // G.711 µ-law, 1 byte per sample
 export const CHUNK_MS = 250;
 export const CHUNK_SAMPLES = (SAMPLE_RATE * CHUNK_MS) / 1000;
+
+/** How many chunks a clip of this length is made of (the last one may be shorter). */
+export function chunkCountFor(durationMs: number): number {
+  return Math.ceil(Math.round((durationMs * SAMPLE_RATE) / 1000) / CHUNK_SAMPLES);
+}
 export const FLOOR_LEASE_MS = 3000; // floor frees if the speaker sends nothing for this long
 export const MIN_CLIP_MS = 300; // shorter holds are treated as accidental taps
 export const MAX_CLIP_MS = 60_000;
@@ -82,9 +87,7 @@ export function encodeChunkFrame(clipId: string, seq: number, payload: Uint8Arra
   return output;
 }
 
-export function decodeChunkFrame(
-  data: Uint8Array,
-): { clipId: string; seq: number; payload: Uint8Array } | null {
+export function decodeChunkFrame(data: Uint8Array): { clipId: string; seq: number; payload: Uint8Array } | null {
   if (data.length < FRAME_HEADER_LENGTH || data[0] !== FRAME_AUDIO) return null;
   let clipId = '';
   for (let index = 0; index < CLIP_ID_LENGTH; index++) clipId += String.fromCharCode(data[1 + index]);

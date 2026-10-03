@@ -1,14 +1,14 @@
-import { configureStore, createListenerMiddleware, isAnyOf } from '@reduxjs/toolkit';
+import { configureStore, createListenerMiddleware } from '@reduxjs/toolkit';
 import { useDispatch, useSelector } from 'react-redux';
-import { keyValueStore, messageCache } from '@/services/db';
+import { loadSavedState, startSaving } from './persistence';
 import connection from './slices/connection';
 import floor from './slices/floor';
-import messages, { setHeardBy, upsertMessages } from './slices/messages';
+import messages from './slices/messages';
 import outbox from './slices/outbox';
-import playback, { finished, markMissed } from './slices/playback';
-import session, { advanceSeq, setName, setServerOffset } from './slices/session';
+import playback from './slices/playback';
+import session from './slices/session';
 
-export const listener = createListenerMiddleware();
+const listener = createListenerMiddleware();
 
 export const store = configureStore({
   reducer: {
@@ -19,6 +19,7 @@ export const store = configureStore({
     outbox,
     messages,
   },
+  preloadedState: loadSavedState(),
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({ serializableCheck: false, immutableCheck: false }).prepend(listener.middleware),
 });
@@ -28,31 +29,7 @@ export type AppDispatch = typeof store.dispatch;
 export const useAppDispatch = useDispatch.withTypes<AppDispatch>();
 export const useAppSelector = useSelector.withTypes<RootState>();
 
-// Persist the small bits of state that must survive a restart.
-listener.startListening({
-  matcher: isAnyOf(setName, advanceSeq, setServerOffset),
-  effect: (_, api) => {
-    const session = (api.getState() as RootState).session;
-    keyValueStore.set('name', session.name);
-    keyValueStore.set('lastSeq', session.lastSeq);
-    keyValueStore.set('serverOffset', session.serverOffset);
-  },
-});
+/** The parts of the store the services use. */
+export type AppStore = Pick<typeof store, 'dispatch' | 'getState' | 'subscribe'>;
 
-listener.startListening({
-  matcher: isAnyOf(markMissed, finished),
-  effect: (_, api) => keyValueStore.set('missed', (api.getState() as RootState).playback.missed),
-});
-
-listener.startListening({
-  actionCreator: upsertMessages,
-  effect: (action) => messageCache.upsert(action.payload),
-});
-
-listener.startListening({
-  actionCreator: setHeardBy,
-  effect: (action, api) => {
-    const message = (api.getState() as RootState).messages.list.find((existing) => existing.id === action.payload.messageId);
-    if (message) messageCache.upsert([message]);
-  },
-});
+startSaving(listener);

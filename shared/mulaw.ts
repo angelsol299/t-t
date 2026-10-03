@@ -83,6 +83,14 @@ export function rootMeanSquare(samples: Float32Array): number {
   return Math.sqrt(sum / samples.length);
 }
 
+/**
+ * Root-mean-square loudness → the 0..1 value the level meter shows.
+ * Speech rarely goes above 0.25 RMS, so it is scaled up to fill the meter.
+ */
+export function meterLevel(rootMeanSquareValue: number): number {
+  return Math.min(1, rootMeanSquareValue * 4);
+}
+
 /** Level meter value from a µ-law chunk. */
 export function mulawRootMeanSquare(bytes: Uint8Array): number {
   if (bytes.length === 0) return 0;

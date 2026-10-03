@@ -1,5 +1,4 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import { keyValueStore } from '@/services/db';
 
 export interface PlaybackState {
   current: { messageId: string; positionMs: number; durationMs: number; playing: boolean } | null;
@@ -9,7 +8,8 @@ export interface PlaybackState {
 
 const playback = createSlice({
   name: 'playback',
-  initialState: (): PlaybackState => ({ current: null, queue: [], missed: keyValueStore.get<string[]>('missed', []) }),
+  // Defaults only: the saved MISSED list is loaded at launch (store/persistence.ts).
+  initialState: (): PlaybackState => ({ current: null, queue: [], missed: [] }),
   reducers: {
     markMissed(state, action: PayloadAction<string[]>) {
       for (const id of action.payload) if (!state.missed.includes(id)) state.missed.push(id);

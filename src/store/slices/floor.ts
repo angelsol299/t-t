@@ -7,11 +7,17 @@ import type { Speaker } from '@shared/protocol';
 //   local   — weak/offline (or I lost the floor mid-clip); recorded and sent after
 export type TalkMode = 'pending' | 'live' | 'local';
 
+export interface MyTalk {
+  clipId: string;
+  startedAt: number;
+  mode: TalkMode;
+}
+
 export interface FloorState {
   speaker: Speaker | null; // someone else is live
   holding: boolean; // finger on the button
-  my: { clipId: string; startedAt: number; mode: TalkMode } | null;
-  denied: Speaker | null; // 08: lost the race and still holding
+  myTalk: MyTalk | null; // I am recording
+  lostRaceTo: Speaker | null; // 08: someone else got the floor first while I was pressing
   level: number; // 0..1, mine while talking, the speaker's while listening
   notice: string | null; // transient line under the channel name
   micDenied: boolean;
@@ -20,8 +26,8 @@ export interface FloorState {
 const initialState: FloorState = {
   speaker: null,
   holding: false,
-  my: null,
-  denied: null,
+  myTalk: null,
+  lostRaceTo: null,
   level: 0,
   notice: null,
   micDenied: false,
@@ -33,26 +39,26 @@ const floor = createSlice({
   reducers: {
     setHolding(state, action: PayloadAction<boolean>) {
       state.holding = action.payload;
-      if (!action.payload) state.denied = null;
+      if (!action.payload) state.lostRaceTo = null;
     },
-    startMine(state, action: PayloadAction<{ clipId: string; startedAt: number; mode: TalkMode }>) {
-      state.my = action.payload;
-      state.denied = null;
+    startMyTalk(state, action: PayloadAction<MyTalk>) {
+      state.myTalk = action.payload;
+      state.lostRaceTo = null;
       state.notice = null;
     },
-    setMyMode(state, action: PayloadAction<TalkMode>) {
-      if (state.my) state.my.mode = action.payload;
+    setMyTalkMode(state, action: PayloadAction<TalkMode>) {
+      if (state.myTalk) state.myTalk.mode = action.payload;
     },
-    stopMine(state) {
-      state.my = null;
+    stopMyTalk(state) {
+      state.myTalk = null;
       state.level = 0;
     },
     setSpeaker(state, action: PayloadAction<Speaker | null>) {
       state.speaker = action.payload;
-      if (!action.payload && !state.my) state.level = 0;
+      if (!action.payload && !state.myTalk) state.level = 0;
     },
-    setDenied(state, action: PayloadAction<Speaker | null>) {
-      state.denied = action.payload;
+    setLostRaceTo(state, action: PayloadAction<Speaker | null>) {
+      state.lostRaceTo = action.payload;
     },
     setLevel(state, action: PayloadAction<number>) {
       state.level = action.payload;
@@ -66,6 +72,15 @@ const floor = createSlice({
   },
 });
 
-export const { setHolding, startMine, setMyMode, stopMine, setSpeaker, setDenied, setLevel, setNotice, setMicDenied } =
-  floor.actions;
+export const {
+  setHolding,
+  startMyTalk,
+  setMyTalkMode,
+  stopMyTalk,
+  setSpeaker,
+  setLostRaceTo,
+  setLevel,
+  setNotice,
+  setMicDenied,
+} = floor.actions;
 export default floor.reducer;

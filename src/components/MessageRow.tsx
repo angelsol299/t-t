@@ -1,17 +1,21 @@
 import { AudioLines, Check, Mic, Pause, Play, Trash2 } from 'lucide-react-native';
 import { memo, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useAppSelector } from '@/store';
 import type { Row } from '@/store/selectors';
 import { Design } from '@/theme/Design';
-import { clock, duration, sentAgo } from '@/utils/format';
+import { formatClockTime, formatDuration, formatSentAgo } from '@/utils/format';
 
 export interface RowPlayState {
-  playing: boolean;
   current: boolean; // this row is the one loaded in the player
-  positionMs: number;
+  playing: boolean;
   durationMs: number; // length of the decoded audio actually playing
   next: boolean; // next in the auto-play queue
 }
+
+/** Shared by every row that isn't loaded in the player, so memo() can skip them. */
+export const IDLE_PLAY_STATE: RowPlayState = { current: false, playing: false, durationMs: 0, next: false };
+export const NEXT_PLAY_STATE: RowPlayState = { ...IDLE_PLAY_STATE, next: true };
 
 interface Props {
   row: Row;
@@ -37,16 +41,20 @@ function YouChip() {
  * lands on 100% exactly as playback ends. Progress ticks (every 100ms) only
  * resync it on start, pause and resume.
  */
-function LengthPill({ ms, play }: { ms: number; play?: RowPlayState }) {
-  const lengthLabel = duration(ms);
+function LengthPill({ messageId, ms, play }: { messageId: string; ms: number; play?: RowPlayState }) {
+  const lengthLabel = formatDuration(ms);
   const [progress] = useState(() => new Animated.Value(0));
   const active = !!play;
   const playing = !!play?.playing;
   const total = play?.durationMs || ms;
+  // Only the row loaded in the player follows the position (updated every 100ms).
+  const positionMs = useAppSelector((state) =>
+    active && state.playback.current?.messageId === messageId ? state.playback.current.positionMs : 0,
+  );
   const position = useRef(0);
 
   useEffect(() => {
-    position.current = play?.positionMs ?? 0;
+    position.current = positionMs;
   });
 
   useEffect(() => {
@@ -71,7 +79,7 @@ function LengthPill({ ms, play }: { ms: number; play?: RowPlayState }) {
     <View
       style={[styles.length, active && styles.lengthActive]}
       accessible
-      accessibilityLabel={active ? `Length ${lengthLabel}, ${duration(play.positionMs)} played` : `Length ${lengthLabel}`}
+      accessibilityLabel={active ? `Length ${lengthLabel}, ${formatDuration(positionMs)} played` : `Length ${lengthLabel}`}
     >
       {active && <Animated.View style={[styles.lengthFill, { transform: [{ scaleX: progress }] }]} />}
       <AudioLines size={12} color={Design.color.ink} strokeWidth={2.4} />
@@ -101,7 +109,13 @@ function PlayButton({ playing, onPress, label }: { playing: boolean; onPress: ()
       {playing ? (
         <Pause size={13} color={Design.color.liveText} fill={Design.color.liveText} strokeWidth={0} />
       ) : (
-        <Play size={13} color={Design.color.ink} fill={Design.color.ink} strokeWidth={0} style={{ marginLeft: Design.space.xxsmall }} />
+        <Play
+          size={13}
+          color={Design.color.ink}
+          fill={Design.color.ink}
+          strokeWidth={0}
+          style={{ marginLeft: Design.space.xxsmall }}
+        />
       )}
     </Pressable>
   );
@@ -116,7 +130,11 @@ function Bar({ percent, track, fill }: { percent: number; track: string; fill: s
 }
 
 function MessageRowImpl({ row, play, now, onPlay, onDelete, onRetry }: Props) {
-  const sender = row.mine ? <YouChip /> : <Text style={[Design.typography.rowStrong, { color: Design.color.ink }]}>{row.name}</Text>;
+  const sender = row.mine ? (
+    <YouChip />
+  ) : (
+    <Text style={[Design.typography.rowStrong, { color: Design.color.ink }]}>{row.name}</Text>
+  );
   const senderDescription = row.mine ? 'Your message' : `Message from ${row.name}`;
 
   // Weak signal upload: stacked row with progress (05).
@@ -125,7 +143,13 @@ function MessageRowImpl({ row, play, now, onPlay, onDelete, onRetry }: Props) {
       <View style={styles.stack} accessible accessibilityLabel={`${senderDescription}, sending ${row.receipt.percent} percent`}>
         <View style={styles.stackHead}>
           {sender}
-          <Text style={[Design.typography.rowStrong, styles.tabular, { color: Design.color.weakText, fontFamily: Design.fontFamily.semiBold }]}>
+          <Text
+            style={[
+              Design.typography.rowStrong,
+              styles.tabular,
+              { color: Design.color.weakText, fontFamily: Design.fontFamily.semiBold },
+            ]}
+          >
             Sending {row.receipt.percent}%
           </Text>
         </View>
@@ -137,20 +161,20 @@ function MessageRowImpl({ row, play, now, onPlay, onDelete, onRetry }: Props) {
   let meta: React.ReactNode;
   switch (row.receipt.kind) {
     case 'time':
-      meta = <Text style={styles.meta}>{play.next ? `Next · ${clock(row.at)}` : clock(row.at)}</Text>;
+      meta = <Text style={styles.meta}>{play.next ? `Next · ${formatClockTime(row.at)}` : formatClockTime(row.at)}</Text>;
       break;
     case 'heard':
       meta = (
         <View style={styles.metaRow}>
-          {row.receipt.n > 0 && <Check size={14} color={Design.color.backText} strokeWidth={2.4} />}
+          {row.receipt.heardBy > 0 && <Check size={14} color={Design.color.backText} strokeWidth={2.4} />}
           <Text style={styles.meta}>
-            {row.receipt.n > 0 ? `Heard by ${row.receipt.n} · ${clock(row.at)}` : clock(row.at)}
+            {row.receipt.heardBy > 0 ? `Heard by ${row.receipt.heardBy} · ${formatClockTime(row.at)}` : formatClockTime(row.at)}
           </Text>
         </View>
       );
       break;
     case 'sending':
-      meta = <Text style={styles.meta}>Sending… · {clock(row.at)}</Text>;
+      meta = <Text style={styles.meta}>Sending… · {formatClockTime(row.at)}</Text>;
       break;
     case 'queued':
       meta = <Tag text="Not sent yet" background={Design.color.offlineBg} foreground={Design.color.offline} />;
@@ -167,12 +191,14 @@ function MessageRowImpl({ row, play, now, onPlay, onDelete, onRetry }: Props) {
   const deletable = row.pending && (row.receipt.kind === 'queued' || row.receipt.kind === 'failed');
 
   return (
-    <View style={[styles.row0, styles.row]}>
+    <View style={styles.row}>
       <View style={styles.lead}>
         {sender}
         {row.missed && <Tag text="MISSED" background={Design.color.offlineBg} foreground={Design.color.offline} caps />}
-        <LengthPill ms={row.durationMs} play={play.current ? play : undefined} />
-        {row.late && <Tag text={sentAgo(row.at, now)} background={Design.color.neutral200} foreground={Design.color.neutral700} />}
+        <LengthPill messageId={row.id} ms={row.durationMs} play={play.current ? play : undefined} />
+        {row.late && (
+          <Tag text={formatSentAgo(row.at, now)} background={Design.color.neutral200} foreground={Design.color.neutral700} />
+        )}
         {row.cutShort && <Tag text="Cut short" background={Design.color.neutral200} foreground={Design.color.neutral700} />}
       </View>
       {meta}
@@ -195,8 +221,10 @@ function MessageRowImpl({ row, play, now, onPlay, onDelete, onRetry }: Props) {
 export const MessageRow = memo(MessageRowImpl);
 
 const styles = StyleSheet.create({
-  row0: { flexDirection: 'row', alignItems: 'center', gap: Design.space.medium },
   row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Design.space.medium,
     minHeight: 48,
     paddingVertical: Design.space.xsmall,
     paddingLeft: Design.space.large,
@@ -245,7 +273,11 @@ const styles = StyleSheet.create({
     backgroundColor: Design.color.live,
   },
   tag: { paddingVertical: Design.space.xsmall, paddingHorizontal: Design.space.small, borderRadius: Design.radius.pill },
-  tagCaps: { fontFamily: Design.fontFamily.semiBold, fontSize: Design.fontSize.xxxxsmall, letterSpacing: Design.letterSpacing(0.08, Design.fontSize.xxxxsmall) },
+  tagCaps: {
+    fontFamily: Design.fontFamily.semiBold,
+    fontSize: Design.fontSize.xxxxsmall,
+    letterSpacing: Design.letterSpacing(0.08, Design.fontSize.xxxxsmall),
+  },
   meta: { ...Design.typography.row, color: Design.color.neutral700, fontVariant: ['tabular-nums'] },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: Design.space.xsmall },
   tabular: { fontVariant: ['tabular-nums'] },
@@ -261,7 +293,13 @@ const styles = StyleSheet.create({
     borderColor: Design.color.neutral300,
   },
   playActive: { backgroundColor: Design.color.live, borderColor: Design.color.live },
-  delete: { width: Design.layout.minimumTouchTarget, height: Design.layout.minimumTouchTarget, alignItems: 'center', justifyContent: 'center', marginRight: -Design.space.small },
+  delete: {
+    width: Design.layout.minimumTouchTarget,
+    height: Design.layout.minimumTouchTarget,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: -Design.space.small,
+  },
   bar: { height: 4, borderRadius: 4, overflow: 'hidden' },
   barFill: { height: '100%', borderRadius: 4 },
 });
