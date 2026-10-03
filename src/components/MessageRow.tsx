@@ -32,10 +32,10 @@ function MessageRowImpl({ row, playing, next }: Props) {
     <View style={styles.row}>
       <View style={styles.lead}>
         <Sender row={row} />
-        {row.missed && <Tag text="MISSED" background={Design.color.offlineBg} foreground={Design.color.offline} caps />}
+        {row.missed && <Tag text="MISSED" tone="alert" caps />}
         <LengthPill messageId={row.id} ms={row.durationMs} />
         {row.late && <SentAgoTag at={row.at} />}
-        {row.cutShort && <Tag text="Cut short" background={Design.color.neutral200} foreground={Design.color.neutral700} />}
+        {row.cutShort && <Tag text="Cut short" tone="neutral" />}
       </View>
       <Receipt row={row} next={next} />
       {deletable && <DeleteButton clipId={row.id} />}
@@ -66,7 +66,7 @@ function describeSender(row: Row) {
 }
 
 function Sender({ row }: { row: Row }) {
-  if (!row.mine) return <Text style={[Design.typography.rowStrong, { color: Design.color.ink }]}>{row.name}</Text>;
+  if (!row.mine) return <Text style={styles.senderName}>{row.name}</Text>;
   return (
     <View style={styles.you}>
       <Mic size={14} color={Design.color.ink} strokeWidth={2} />
@@ -94,7 +94,7 @@ function Receipt({ row, next }: { row: Row; next: boolean }) {
     case 'sending':
       return <Text style={styles.meta}>Sending… · {time}</Text>;
     case 'queued':
-      return <Tag text="Not sent yet" background={Design.color.offlineBg} foreground={Design.color.offline} />;
+      return <Tag text="Not sent yet" tone="alert" />;
     case 'failed':
       return (
         <Pressable
@@ -102,7 +102,7 @@ function Receipt({ row, next }: { row: Row; next: boolean }) {
           accessibilityRole="button"
           accessibilityLabel="Not sent. Tap to retry"
         >
-          <Tag text="Not sent · Retry" background={Design.color.offlineBg} foreground={Design.color.offline} />
+          <Tag text="Not sent · Retry" tone="alert" />
         </Pressable>
       );
   }
@@ -128,7 +128,7 @@ function LengthPill({ messageId, ms }: { messageId: string; ms: number }) {
     >
       {current && <View style={[styles.lengthFill, { width: `${percent}%` }]} />}
       <AudioLines size={12} color={Design.color.ink} strokeWidth={2.4} />
-      <Text style={[Design.typography.pill, { color: Design.color.ink }]}>{lengthLabel}</Text>
+      <Text style={styles.lengthText}>{lengthLabel}</Text>
     </View>
   );
 }
@@ -136,13 +136,15 @@ function LengthPill({ messageId, ms }: { messageId: string; ms: number }) {
 /** "Sent 2 min ago": ticks on its own so the rest of the list doesn't re-render. */
 function SentAgoTag({ at }: { at: number }) {
   const now = useNow(true, 30_000);
-  return <Tag text={formatSentAgo(at, now)} background={Design.color.neutral200} foreground={Design.color.neutral700} />;
+  return <Tag text={formatSentAgo(at, now)} tone="neutral" />;
 }
 
-function Tag({ text, background, foreground, caps }: { text: string; background: string; foreground: string; caps?: boolean }) {
+/** A small pill: red for problems (MISSED, Not sent), grey for information. */
+function Tag({ text, tone, caps }: { text: string; tone: 'alert' | 'neutral'; caps?: boolean }) {
+  const alert = tone === 'alert';
   return (
-    <View style={[styles.tag, { backgroundColor: background }]}>
-      <Text style={[caps ? styles.tagCaps : Design.typography.pill, { color: foreground }]}>{text}</Text>
+    <View style={[styles.tag, alert ? styles.tagAlert : styles.tagNeutral]}>
+      <Text style={[caps ? styles.tagCaps : styles.tagText, alert ? styles.tagAlertText : styles.tagNeutralText]}>{text}</Text>
     </View>
   );
 }
@@ -174,13 +176,7 @@ function PlayButton({ playing, onPress, label }: { playing: boolean; onPress: ()
       {playing ? (
         <Pause size={13} color={Design.color.liveText} fill={Design.color.liveText} strokeWidth={0} />
       ) : (
-        <Play
-          size={13}
-          color={Design.color.ink}
-          fill={Design.color.ink}
-          strokeWidth={0}
-          style={{ marginLeft: Design.space.xxsmall }}
-        />
+        <Play size={13} color={Design.color.ink} fill={Design.color.ink} strokeWidth={0} style={styles.playIcon} />
       )}
     </Pressable>
   );
@@ -199,6 +195,7 @@ const styles = StyleSheet.create({
     borderTopColor: Design.color.neutral300,
   },
   lead: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: Design.space.small, flexWrap: 'wrap' },
+  senderName: { ...Design.typography.rowStrong, color: Design.color.ink },
   uploading: {
     gap: Design.space.small,
     paddingVertical: Design.space.medium,
@@ -237,6 +234,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   lengthActive: { borderColor: Design.color.live },
+  lengthText: { ...Design.typography.pill, color: Design.color.ink },
   lengthFill: {
     position: 'absolute',
     top: 0,
@@ -245,6 +243,11 @@ const styles = StyleSheet.create({
     backgroundColor: Design.color.live,
   },
   tag: { paddingVertical: Design.space.xsmall, paddingHorizontal: Design.space.small, borderRadius: Design.radius.pill },
+  tagAlert: { backgroundColor: Design.color.offlineBg },
+  tagNeutral: { backgroundColor: Design.color.neutral200 },
+  tagText: Design.typography.pill,
+  tagAlertText: { color: Design.color.offline },
+  tagNeutralText: { color: Design.color.neutral700 },
   tagCaps: {
     fontFamily: Design.fontFamily.semiBold,
     fontSize: Design.fontSize.xxxxsmall,
@@ -264,6 +267,7 @@ const styles = StyleSheet.create({
     borderColor: Design.color.neutral300,
   },
   playActive: { backgroundColor: Design.color.live, borderColor: Design.color.live },
+  playIcon: { marginLeft: Design.space.xxsmall }, // optically centres the triangle
   delete: {
     width: Design.layout.minimumTouchTarget,
     height: Design.layout.minimumTouchTarget,

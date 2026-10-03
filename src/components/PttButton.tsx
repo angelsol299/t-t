@@ -127,9 +127,9 @@ function Face({ state, color }: { state: PushToTalkState; color: string }) {
 function HoldToTalkFace({ caption, color }: { caption: string; color: string }) {
   return (
     <>
-      <Text style={[Design.typography.caps, { color }]}>{caption}</Text>
+      <Text style={[styles.caption, { color }]}>{caption}</Text>
       <View style={styles.bottom}>
-        <Text style={[Design.typography.headline, { color }]}>{'Hold\nto talk'}</Text>
+        <Text style={[styles.headline, { color }]}>{'Hold\nto talk'}</Text>
         <Mic size={32} color={color} strokeWidth={2} />
       </View>
     </>
@@ -159,12 +159,12 @@ function TalkingFace({
   return (
     <>
       <View style={styles.top}>
-        <Text style={[Design.typography.caps, { color }]}>{title}</Text>
-        <Text style={[Design.typography.caps, { color: captionColor ?? color }]}>{caption}</Text>
+        <Text style={[styles.caption, { color }]}>{title}</Text>
+        <Text style={[styles.caption, { color: captionColor ?? color }]}>{caption}</Text>
       </View>
       <LevelMeter level={level} bars={16} color={color} />
       <View style={styles.bottom}>
-        <Text style={[Design.typography.headline, { color }]}>{headline}</Text>
+        <Text style={[styles.headline, { color }]}>{headline}</Text>
         <Timer startedAt={startedAt} color={color} warnColor={warnColor} />
       </View>
     </>
@@ -175,14 +175,14 @@ function TalkingFace({
 function ReceivingFace({ name, startedAt, level, color }: { name: string; startedAt: number; level: number; color: string }) {
   return (
     <>
-      <Text style={[Design.typography.caps, { color }]}>Live</Text>
+      <Text style={[styles.caption, { color }]}>Live</Text>
       <LevelMeter level={level} bars={12} color={color} />
       <View style={styles.bottom}>
         <View style={styles.flex}>
-          <Text style={[Design.typography.speaker, { color }]} numberOfLines={1}>
+          <Text style={[styles.speaker, { color }]} numberOfLines={1}>
             {name}
           </Text>
-          <Text style={[Design.typography.bodyStrong, styles.talking]}>is talking…</Text>
+          <Text style={styles.talking}>is talking…</Text>
         </View>
         <Timer startedAt={startedAt} color={color} />
       </View>
@@ -193,9 +193,9 @@ function ReceivingFace({ name, startedAt, level, color }: { name: string; starte
 function MicOffFace({ color }: { color: string }) {
   return (
     <>
-      <Text style={[Design.typography.caps, { color: Design.color.neutral700 }]}>Microphone off</Text>
+      <Text style={styles.micOffCaption}>Microphone off</Text>
       <View style={styles.bottom}>
-        <Text style={[Design.typography.headline, { color }]}>{'Allow\nmicrophone'}</Text>
+        <Text style={[styles.headline, { color }]}>{'Allow\nmicrophone'}</Text>
         <MicOff size={32} color={color} strokeWidth={2} />
       </View>
     </>
@@ -231,11 +231,7 @@ function Timer({ startedAt, color, warnColor }: { startedAt: number; color: stri
   const now = useNow(true, 250);
   const elapsed = now - startedAt;
   const warn = warnColor && MAX_CLIP_MS - elapsed <= WARN_BEFORE_MAX_MS;
-  return (
-    <Text style={[Design.typography.headline, styles.tabular, { color: warn ? warnColor : color }]}>
-      {formatDuration(elapsed)}
-    </Text>
-  );
+  return <Text style={[styles.timer, { color: warn ? warnColor : color }]}>{formatDuration(elapsed)}</Text>;
 }
 
 const styles = StyleSheet.create({
@@ -254,7 +250,17 @@ const styles = StyleSheet.create({
   bottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
   meter: { flexDirection: 'row', alignItems: 'center', gap: Design.space.xsmall, height: 40 },
   meterBar: { width: 4, borderRadius: 4 },
-  tabular: { fontVariant: ['tabular-nums'] },
   flex: { flex: 1 },
-  talking: { color: Design.color.talkSecondary, fontFamily: Design.fontFamily.semiBold, marginTop: Design.space.xsmall },
+  // Text colours come from the button's look (see lookFor), so they are set where used.
+  caption: Design.typography.caps,
+  headline: Design.typography.headline,
+  speaker: Design.typography.speaker,
+  timer: { ...Design.typography.headline, fontVariant: ['tabular-nums'] },
+  micOffCaption: { ...Design.typography.caps, color: Design.color.neutral700 },
+  talking: {
+    ...Design.typography.bodyStrong,
+    fontFamily: Design.fontFamily.semiBold,
+    color: Design.color.talkSecondary,
+    marginTop: Design.space.xsmall,
+  },
 });

@@ -4,10 +4,10 @@ import { Design } from '@/theme/Design';
 export function ChannelHeader({ name, subtitle }: { name: string; subtitle: string }) {
   return (
     <View style={styles.wrap}>
-      <Text style={[Design.typography.channel, { color: Design.color.ink }]} accessibilityRole="header">
+      <Text style={styles.title} accessibilityRole="header">
         {name}
       </Text>
-      <Text style={[Design.typography.meta, styles.subtitle]} accessibilityLiveRegion="polite">
+      <Text style={styles.subtitle} accessibilityLiveRegion="polite">
         {subtitle}
       </Text>
     </View>
@@ -16,5 +16,6 @@ export function ChannelHeader({ name, subtitle }: { name: string; subtitle: stri
 
 const styles = StyleSheet.create({
   wrap: { paddingTop: Design.space.medium, paddingHorizontal: Design.space.large, paddingBottom: Design.space.xlarge },
-  subtitle: { color: Design.color.neutral700, marginTop: Design.space.small },
+  title: { ...Design.typography.channel, color: Design.color.ink },
+  subtitle: { ...Design.typography.meta, color: Design.color.neutral700, marginTop: Design.space.small },
 });

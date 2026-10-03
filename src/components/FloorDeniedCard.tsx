@@ -8,10 +8,8 @@ export function FloorDeniedCard({ name }: { name: string }) {
     <View style={styles.card} accessibilityLiveRegion="assertive">
       <Clock size={20} color={Design.color.ink} strokeWidth={2} />
       <View style={styles.text}>
-        <Text style={[Design.typography.rowStrong, { color: Design.color.ink }]}>{name} got there first</Text>
-        <Text style={[Design.typography.row, { color: Design.color.neutral700 }]}>
-          Keep holding and you go live the moment they stop.
-        </Text>
+        <Text style={styles.title}>{name} got there first</Text>
+        <Text style={styles.body}>Keep holding and you go live the moment they stop.</Text>
       </View>
     </View>
   );
@@ -32,4 +30,6 @@ const styles = StyleSheet.create({
     borderColor: Design.color.neutral300,
   },
   text: { flex: 1, gap: Design.space.xxsmall },
+  title: { ...Design.typography.rowStrong, color: Design.color.ink },
+  body: { ...Design.typography.row, color: Design.color.neutral700 },
 });

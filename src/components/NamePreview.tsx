@@ -10,10 +10,10 @@ export function NamePreview({ name }: { name: string }) {
         <Text style={styles.avatarText}>{(name[0] ?? '?').toUpperCase()}</Text>
       </View>
       <View style={styles.text}>
-        <Text style={[Design.typography.bodyStrong, { color: Design.color.ink }]} numberOfLines={1}>
+        <Text style={styles.title} numberOfLines={1}>
           {shown} is talking…
         </Text>
-        <Text style={[Design.typography.meta, { color: Design.color.neutral700 }]}>This is how others see you</Text>
+        <Text style={styles.caption}>This is how others see you</Text>
       </View>
     </View>
   );
@@ -31,4 +31,6 @@ const styles = StyleSheet.create({
   },
   avatarText: { fontFamily: Design.fontFamily.bold, fontSize: Design.fontSize.small, color: Design.color.ground },
   text: { flex: 1, gap: Design.space.xxsmall },
+  title: { ...Design.typography.bodyStrong, color: Design.color.ink },
+  caption: { ...Design.typography.meta, color: Design.color.neutral700 },
 });

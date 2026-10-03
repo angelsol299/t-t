@@ -7,22 +7,20 @@ import { formatDuration } from '@/utils/format';
 
 export function WeakBand() {
   return (
-    <View style={[styles.band, { backgroundColor: Design.color.weakBg }]} accessibilityLiveRegion="polite">
-      <Text style={[Design.typography.band, { color: Design.color.weakText }]}>Weak signal — messages may be slow</Text>
+    <View style={[styles.band, styles.weak]} accessibilityLiveRegion="polite">
+      <Text style={styles.weakText}>Weak signal — messages may be slow</Text>
     </View>
   );
 }
 
 export function BackOnlineBand({ missed, onReplay }: { missed: number; onReplay: () => void }) {
   return (
-    <View style={[styles.band, styles.row, { backgroundColor: Design.color.backBg }]} accessibilityLiveRegion="polite">
-      <Text style={[Design.typography.band, { color: Design.color.backText }]}>
-        {missed > 0 ? `Back online — ${missed} missed` : 'Back online'}
-      </Text>
+    <View style={[styles.band, styles.backOnline]} accessibilityLiveRegion="polite">
+      <Text style={styles.backOnlineText}>{missed > 0 ? `Back online — ${missed} missed` : 'Back online'}</Text>
       {missed > 0 && (
         <Pressable onPress={onReplay} style={styles.ghost} accessibilityRole="button" accessibilityLabel="Replay all">
           <RotateCcw size={14} color={Design.color.backText} strokeWidth={2.2} />
-          <Text style={[Design.typography.band, { color: Design.color.backText }]}>Replay all</Text>
+          <Text style={styles.backOnlineText}>Replay all</Text>
         </Pressable>
       )}
     </View>
@@ -44,8 +42,8 @@ export function OfflineBand({ since, saved, nextRetryAt, onRetry }: OfflineProps
     <View style={[styles.band, styles.offline]} accessibilityLiveRegion="polite">
       <View style={styles.offlineTop}>
         <View style={styles.offlineText}>
-          <Text style={[Design.typography.rowStrong, { color: Design.color.offline }]}>{title}</Text>
-          <Text style={[Design.typography.row, { color: Design.color.offline }]}>
+          <Text style={styles.offlineTitle}>{title}</Text>
+          <Text style={styles.offlineBody}>
             {saved > 0 ? "They send automatically when you're back online." : 'Talk still works — it sends when you’re back.'}
           </Text>
         </View>
@@ -56,15 +54,13 @@ export function OfflineBand({ since, saved, nextRetryAt, onRetry }: OfflineProps
           accessibilityLabel={retryIn !== null ? `Retrying in ${retryIn} seconds. Retry now` : 'Retry now'}
           style={styles.retry}
         >
-          <Text style={[Design.typography.band, styles.tabular, { color: Design.color.offline }]}>
-            {retryIn !== null && retryIn > 0 ? `${retryIn}s` : 'Now'}
-          </Text>
+          <Text style={styles.retryText}>{retryIn !== null && retryIn > 0 ? `${retryIn}s` : 'Now'}</Text>
           <RotateCw size={14} color={Design.color.offline} strokeWidth={2.2} />
         </Pressable>
       </View>
       <Pressable
         onPress={() => Linking.openURL(`tel:${RECEPTION_PHONE}`)}
-        style={({ pressed }) => [styles.call, pressed && { opacity: 0.85 }]}
+        style={({ pressed }) => [styles.call, pressed && styles.callPressed]}
         accessibilityRole="button"
         accessibilityLabel="Urgent? Call reception"
       >
@@ -83,7 +79,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: Design.space.regular,
     borderRadius: Design.radius.card,
   },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 0, minHeight: 44 },
+  weak: { backgroundColor: Design.color.weakBg },
+  weakText: { ...Design.typography.band, color: Design.color.weakText },
+  backOnline: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 0,
+    minHeight: Design.layout.minimumTouchTarget,
+    backgroundColor: Design.color.backBg,
+  },
+  backOnlineText: { ...Design.typography.band, color: Design.color.backText },
   ghost: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -99,8 +105,10 @@ const styles = StyleSheet.create({
   },
   offlineTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: Design.space.medium },
   offlineText: { flex: 1, gap: Design.space.xxsmall },
+  offlineTitle: { ...Design.typography.rowStrong, color: Design.color.offline },
+  offlineBody: { ...Design.typography.row, color: Design.color.offline },
   retry: { flexDirection: 'row', alignItems: 'center', gap: Design.space.xsmall },
-  tabular: { fontVariant: ['tabular-nums'] },
+  retryText: { ...Design.typography.band, fontVariant: ['tabular-nums'], color: Design.color.offline },
   call: {
     height: 48,
     borderRadius: Design.radius.card,
@@ -110,5 +118,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: Design.space.regular,
   },
+  callPressed: { opacity: 0.85 },
   callText: { fontFamily: Design.fontFamily.medium, fontSize: Design.fontSize.small, color: Design.color.white },
 });

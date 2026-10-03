@@ -96,15 +96,15 @@ export function TopBar({ net, right, onLongPressBrand }: Props) {
         style={styles.brand}
       >
         <Logo size={22} />
-        <Text style={[Design.typography.brand, { color: Design.color.ink }]}>Teton Talk</Text>
+        <Text style={styles.brandText}>Teton Talk</Text>
       </Pressable>
       {status ? (
         <View style={styles.status} accessibilityLabel={`Network ${status.label}`} accessibilityRole="text">
           <StatusDot {...status} />
-          <Text style={[Design.typography.caps, { color: status.text }]}>{status.label}</Text>
+          <Text style={[styles.label, { color: status.text }]}>{status.label}</Text>
         </View>
       ) : right ? (
-        <Text style={[Design.typography.caps, { color: Design.color.ink }]}>{right}</Text>
+        <Text style={styles.label}>{right}</Text>
       ) : null}
     </View>
   );
@@ -119,6 +119,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Design.space.large,
   },
   brand: { flexDirection: 'row', alignItems: 'center', gap: Design.space.small },
+  brandText: { ...Design.typography.brand, color: Design.color.ink },
+  label: { ...Design.typography.caps, color: Design.color.ink },
   status: { flexDirection: 'row', alignItems: 'center', gap: Design.space.small },
   // Laid out as the 8px dot; the halo and pulse ring overflow it, like the
   // handoff's box-shadow halo.

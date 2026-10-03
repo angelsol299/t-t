@@ -23,7 +23,7 @@ export function MessageList() {
   if (rows.length === 0) {
     return (
       <View style={styles.empty}>
-        <Text style={[Design.typography.meta, { color: Design.color.neutral700 }]}>No messages this shift yet</Text>
+        <Text style={styles.emptyText}>No messages this shift yet</Text>
       </View>
     );
   }
@@ -36,7 +36,7 @@ export function MessageList() {
       keyExtractor={(row) => row.id}
       style={styles.list}
       // Inverted, so the footer sits above the oldest row.
-      ListFooterComponent={<Text style={[Design.typography.caps, styles.section]}>This shift · recorded</Text>}
+      ListFooterComponent={<Text style={styles.section}>This shift · recorded</Text>}
       renderItem={({ item }) => <MessageRow row={item} playing={item.id === playingId} next={item.id === nextId} />}
     />
   );
@@ -44,6 +44,12 @@ export function MessageList() {
 
 const styles = StyleSheet.create({
   list: { flex: 1 },
-  section: { color: Design.color.neutral700, paddingHorizontal: Design.space.large, paddingBottom: Design.space.small },
+  section: {
+    ...Design.typography.caps,
+    color: Design.color.neutral700,
+    paddingHorizontal: Design.space.large,
+    paddingBottom: Design.space.small,
+  },
   empty: { flex: 1, justifyContent: 'flex-end', paddingHorizontal: Design.space.large, paddingBottom: Design.space.regular },
+  emptyText: { ...Design.typography.meta, color: Design.color.neutral700 },
 });
