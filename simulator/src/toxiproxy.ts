@@ -53,7 +53,10 @@ export function toxiproxy(api = process.env.TOXIPROXY_API ?? 'http://localhost:8
       await call('POST', `/proxies/${proxy}`, { enabled: true });
     },
     async list() {
-      return (await call('GET', '/proxies')) as Record<string, { listen: string; upstream: string; enabled: boolean; toxics: Toxic[] }>;
+      return (await call('GET', '/proxies')) as Record<
+        string,
+        { listen: string; upstream: string; enabled: boolean; toxics: Toxic[] }
+      >;
     },
   };
 }

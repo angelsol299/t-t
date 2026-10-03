@@ -38,7 +38,9 @@ async function main() {
   if (command === 'status') {
     for (const [name, proxy] of Object.entries(await toxiproxyClient.list())) {
       const toxics = proxy.toxics.map((toxic) => `${toxic.type}(${toxic.stream})`).join(', ') || 'none';
-      console.log(`${name.padEnd(5)} ${proxy.listen} → ${proxy.upstream}  ${proxy.enabled ? 'enabled ' : 'DISABLED'}  toxics: ${toxics}`);
+      console.log(
+        `${name.padEnd(5)} ${proxy.listen} → ${proxy.upstream}  ${proxy.enabled ? 'enabled ' : 'DISABLED'}  toxics: ${toxics}`,
+      );
     }
     return;
   }

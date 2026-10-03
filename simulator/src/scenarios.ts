@@ -40,9 +40,24 @@ export const scenarios: Record<string, { about: string; run(context: ScenarioCon
     about: '600±400ms latency each way and ~6KB/s upstream (below the 8KB/s live stream): forces record-and-send.',
     async run(context) {
       await each(context, async (proxy) => {
-        await context.toxiproxyClient.addToxic(proxy, { name: 'lat_down', type: 'latency', stream: 'downstream', attributes: { latency: 600, jitter: 400 } });
-        await context.toxiproxyClient.addToxic(proxy, { name: 'lat_up', type: 'latency', stream: 'upstream', attributes: { latency: 600, jitter: 400 } });
-        await context.toxiproxyClient.addToxic(proxy, { name: 'bw_up', type: 'bandwidth', stream: 'upstream', attributes: { rate: 6 } });
+        await context.toxiproxyClient.addToxic(proxy, {
+          name: 'lat_down',
+          type: 'latency',
+          stream: 'downstream',
+          attributes: { latency: 600, jitter: 400 },
+        });
+        await context.toxiproxyClient.addToxic(proxy, {
+          name: 'lat_up',
+          type: 'latency',
+          stream: 'upstream',
+          attributes: { latency: 600, jitter: 400 },
+        });
+        await context.toxiproxyClient.addToxic(proxy, {
+          name: 'bw_up',
+          type: 'bandwidth',
+          stream: 'upstream',
+          attributes: { rate: 6 },
+        });
       });
     },
   },
@@ -83,8 +98,18 @@ export const scenarios: Record<string, { about: string; run(context: ScenarioCon
     about: 'Connections stay open but no data flows (captive wifi). Heartbeats must notice.',
     async run(context) {
       await each(context, async (proxy) => {
-        await context.toxiproxyClient.addToxic(proxy, { name: 'zombie_down', type: 'timeout', stream: 'downstream', attributes: { timeout: 0 } });
-        await context.toxiproxyClient.addToxic(proxy, { name: 'zombie_up', type: 'timeout', stream: 'upstream', attributes: { timeout: 0 } });
+        await context.toxiproxyClient.addToxic(proxy, {
+          name: 'zombie_down',
+          type: 'timeout',
+          stream: 'downstream',
+          attributes: { timeout: 0 },
+        });
+        await context.toxiproxyClient.addToxic(proxy, {
+          name: 'zombie_up',
+          type: 'timeout',
+          stream: 'upstream',
+          attributes: { timeout: 0 },
+        });
       });
     },
   },
@@ -92,7 +117,12 @@ export const scenarios: Record<string, { about: string; run(context: ScenarioCon
     about: 'Every connection is reset 1.5s after it opens: uploads must resume, not restart.',
     async run(context) {
       await each(context, (proxy) =>
-        context.toxiproxyClient.addToxic(proxy, { name: 'reset', type: 'reset_peer', stream: 'upstream', attributes: { timeout: 1500 } }),
+        context.toxiproxyClient.addToxic(proxy, {
+          name: 'reset',
+          type: 'reset_peer',
+          stream: 'upstream',
+          attributes: { timeout: 1500 },
+        }),
       );
     },
   },

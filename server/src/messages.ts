@@ -17,12 +17,7 @@ export interface Sender {
   name: string;
 }
 
-export function createMessages(
-  database: Database,
-  clipStore: ClipStore,
-  clients: Clients,
-  log: (...details: unknown[]) => void,
-) {
+export function createMessages(database: Database, clipStore: ClipStore, clients: Clients, log: (...details: unknown[]) => void) {
   // For each clip still uploading: the chunks that have arrived, and the
   // highest chunk index with no gaps before it (what we acknowledge to the sender).
   const uploads = new Map<string, { receivedChunks: Set<number>; highestContiguousChunk: number }>();

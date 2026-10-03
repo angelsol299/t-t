@@ -73,7 +73,9 @@ function Root({ fontsLoaded }: { fontsLoaded: boolean }) {
       {/* Screens mount only once Archivo is registered: on iOS, text first drawn
           before its font loads keeps the system fallback until it re-renders. */}
       {fontsLoaded && (
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Design.color.ground }, animation: 'fade' }} />
+        <Stack
+          screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Design.color.ground }, animation: 'fade' }}
+        />
       )}
       {showSplash && <Splash />}
     </>

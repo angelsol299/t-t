@@ -30,7 +30,8 @@ for (const name of NAMES) {
     if (name === NAMES[0] && !NAMES.includes(speaker.name)) log(`📣 ${speaker.name} is talking`);
   });
   bot.on('message', (message) => {
-    if (name === NAMES[0]) log(`✉  #${message.seq} ${message.senderName} ${(message.durationMs / 1000).toFixed(1)}s (heard by ${message.heardBy})`);
+    if (name === NAMES[0])
+      log(`✉  #${message.seq} ${message.senderName} ${(message.durationMs / 1000).toFixed(1)}s (heard by ${message.heardBy})`);
   });
   bots.set(name.toLowerCase(), bot);
 }
@@ -43,9 +44,11 @@ async function race() {
   // Delay what the phone receives so it cannot see Anna take the floor: if you
   // press at GO, your floor_request reaches the server after hers and you lose
   // a genuine race (screen 08).
-  await toxiproxyClient.addToxic('app', { name: 'race', type: 'latency', stream: 'downstream', attributes: { latency: 1500 } }).catch(() => {
-    log('(no Toxiproxy: race still runs, but you need to press within your round-trip time)');
-  });
+  await toxiproxyClient
+    .addToxic('app', { name: 'race', type: 'latency', stream: 'downstream', attributes: { latency: 1500 } })
+    .catch(() => {
+      log('(no Toxiproxy: race still runs, but you need to press within your round-trip time)');
+    });
   for (const count of ['3', '2', '1']) {
     log(`race in ${count}…`);
     await new Promise((resolve) => setTimeout(resolve, 1000));

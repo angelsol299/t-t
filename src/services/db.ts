@@ -53,7 +53,12 @@ export const messageCache = {
     if (list.length === 0) return;
     db.withTransactionSync(() => {
       for (const message of list) {
-        db.runSync('INSERT OR REPLACE INTO messages (id, seq, json) VALUES (?, ?, ?)', message.id, message.seq, JSON.stringify(message));
+        db.runSync(
+          'INSERT OR REPLACE INTO messages (id, seq, json) VALUES (?, ?, ?)',
+          message.id,
+          message.seq,
+          JSON.stringify(message),
+        );
       }
     });
   },

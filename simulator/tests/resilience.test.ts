@@ -39,7 +39,10 @@ describe('never quietly lose what someone said', () => {
 
     // The first 5 chunks made it before the connection died.
     for (let seq = 0; seq < 5; seq++) {
-      await fetch(`${SERVER_DIRECT_URL}/clips/${clipId}/chunks/${seq}`, { method: 'PUT', body: new Uint8Array(clip.chunks[seq]) });
+      await fetch(`${SERVER_DIRECT_URL}/clips/${clipId}/chunks/${seq}`, {
+        method: 'PUT',
+        body: new Uint8Array(clip.chunks[seq]),
+      });
     }
     await TOXIPROXY.enable(link, true);
     await until(() => anna.pending.size === 0, 10_000, 'upload to finish');

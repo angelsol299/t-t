@@ -80,7 +80,9 @@ export default function Join() {
           <View style={styles.spacer} />
           <View style={styles.foot}>
             <History size={16} color={Design.color.neutral700} strokeWidth={2} />
-            <Text style={[Design.typography.meta, { color: Design.color.neutral700 }]}>Talk is recorded and kept for 30 days.</Text>
+            <Text style={[Design.typography.meta, { color: Design.color.neutral700 }]}>
+              Talk is recorded and kept for 30 days.
+            </Text>
           </View>
         </View>
         <Pressable
@@ -91,7 +93,9 @@ export default function Join() {
           accessibilityState={{ disabled: !trimmed }}
           style={({ pressed }) => [styles.cta, (!trimmed || pressed) && { opacity: trimmed ? 0.9 : 0.4 }]}
         >
-          <Text style={[Design.typography.cta, { color: Design.color.ground }]}>{edit ? 'Save name' : `Join ${CHANNEL_NAME}`}</Text>
+          <Text style={[Design.typography.cta, { color: Design.color.ground }]}>
+            {edit ? 'Save name' : `Join ${CHANNEL_NAME}`}
+          </Text>
           <View style={styles.ctaRight}>
             {online !== null && <Text style={styles.ctaOnline}>{online} online</Text>}
             <ArrowRight size={20} color={Design.color.ground} strokeWidth={2} />
@@ -104,7 +108,13 @@ export default function Join() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Design.color.ground },
-  body: { flex: 1, paddingTop: Design.space.xxxlarge, paddingHorizontal: Design.space.large, paddingBottom: Design.space.xlarge, gap: Design.space.xlarge },
+  body: {
+    flex: 1,
+    paddingTop: Design.space.xxxlarge,
+    paddingHorizontal: Design.space.large,
+    paddingBottom: Design.space.xlarge,
+    gap: Design.space.xlarge,
+  },
   field: {
     backgroundColor: Design.color.white,
     borderWidth: 2,
@@ -115,7 +125,12 @@ const styles = StyleSheet.create({
     paddingBottom: Design.space.regular,
     gap: Design.space.xsmall,
   },
-  label: { fontFamily: Design.fontFamily.bold, fontSize: Design.fontSize.xxxxsmall, letterSpacing: Design.letterSpacing(0.14, Design.fontSize.xxxxsmall), color: Design.color.neutral700 },
+  label: {
+    fontFamily: Design.fontFamily.bold,
+    fontSize: Design.fontSize.xxxxsmall,
+    letterSpacing: Design.letterSpacing(0.14, Design.fontSize.xxxxsmall),
+    color: Design.color.neutral700,
+  },
   input: { ...Design.typography.input, color: Design.color.ink, padding: 0, lineHeight: 33 },
   preview: { flexDirection: 'row', alignItems: 'center', gap: Design.space.medium, paddingHorizontal: Design.space.xsmall },
   avatar: {

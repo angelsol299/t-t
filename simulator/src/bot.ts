@@ -215,7 +215,8 @@ export class Bot extends EventEmitter {
 
     const audio = this.audio(ms);
     const chunks: Uint8Array[] = [];
-    for (let offset = 0; offset < audio.length; offset += CHUNK_SAMPLES) chunks.push(audio.subarray(offset, offset + CHUNK_SAMPLES));
+    for (let offset = 0; offset < audio.length; offset += CHUNK_SAMPLES)
+      chunks.push(audio.subarray(offset, offset + CHUNK_SAMPLES));
     this.log(`${this.name}: talking ${(ms / 1000).toFixed(1)}s (${live ? 'live' : 'record-and-send'})`);
     const pending: Pending = { clipId, chunks, info: { total: chunks.length, durationMs: ms, recordedAt } };
     this.pending.set(clipId, pending);
@@ -249,7 +250,10 @@ export class Bot extends EventEmitter {
           const have = new Set(received);
           for (let seq = 0; seq < entry.chunks.length; seq++) {
             if (have.has(seq)) continue;
-            const put = await this.http(`/clips/${entry.clipId}/chunks/${seq}`, { method: 'PUT', body: new Uint8Array(entry.chunks[seq]) });
+            const put = await this.http(`/clips/${entry.clipId}/chunks/${seq}`, {
+              method: 'PUT',
+              body: new Uint8Array(entry.chunks[seq]),
+            });
             if (!put.ok) throw new Error(`put ${put.status}`);
             this.chunkUploads++;
           }

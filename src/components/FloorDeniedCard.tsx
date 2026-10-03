@@ -9,7 +9,9 @@ export function FloorDeniedCard({ name }: { name: string }) {
       <Clock size={20} color={Design.color.ink} strokeWidth={2} />
       <View style={styles.text}>
         <Text style={[Design.typography.rowStrong, { color: Design.color.ink }]}>{name} got there first</Text>
-        <Text style={[Design.typography.row, { color: Design.color.neutral700 }]}>Keep holding and you go live the moment they stop.</Text>
+        <Text style={[Design.typography.row, { color: Design.color.neutral700 }]}>
+          Keep holding and you go live the moment they stop.
+        </Text>
       </View>
     </View>
   );

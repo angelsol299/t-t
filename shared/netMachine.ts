@@ -63,7 +63,9 @@ function nextQuality(state: NetState): boolean {
     state.missedPongs >= WEAK_MISSED_PONGS ||
     state.backlogMs > WEAK_BACKLOG_MS;
   const good =
-    (state.roundTripMs === null || state.roundTripMs < GOOD_ROUND_TRIP_MS) && state.missedPongs === 0 && state.backlogMs < GOOD_BACKLOG_MS;
+    (state.roundTripMs === null || state.roundTripMs < GOOD_ROUND_TRIP_MS) &&
+    state.missedPongs === 0 &&
+    state.backlogMs < GOOD_BACKLOG_MS;
   if (bad) return true;
   if (good) return false;
   return state.poorQuality; // in the hysteresis band: keep what we had

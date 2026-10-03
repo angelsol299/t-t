@@ -117,7 +117,11 @@ export namespace Design {
     /** size: 20 */
     cta: { fontFamily: fontFamily.bold, fontSize: fontSize.medium },
     /** size: 16 */
-    brand: { fontFamily: fontFamily.extraBold, fontSize: fontSize.regular, letterSpacing: letterSpacing(-0.03, fontSize.regular) },
+    brand: {
+      fontFamily: fontFamily.extraBold,
+      fontSize: fontSize.regular,
+      letterSpacing: letterSpacing(-0.03, fontSize.regular),
+    },
     /** size: 15 */
     bodyStrong: { fontFamily: fontFamily.bold, fontSize: fontSize.small },
     /** size: 15 */
