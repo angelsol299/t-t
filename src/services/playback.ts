@@ -1,7 +1,7 @@
 import { clipPlayer } from '@/audio/clipPlayer';
 import { SERVER_URL } from '@/config';
 import type { AppStore } from '@/store';
-import { clearQueue, enqueue, finished, paused, progress, started, stopped } from '@/store/slices/playback';
+import { clearQueue, enqueue, finished, paused, started, stopped } from '@/store/slices/playback';
 import { audioCache, clipFiles } from './files';
 import type { Socket } from './socket';
 
@@ -48,16 +48,13 @@ export function createPlayback({ store, socket, showNotice, isSomeoneTalking }: 
       dispatch(enqueue([messageId]));
       return;
     }
-    const durationMs = clipPlayer.play(bytes, fromMs, {
-      onProgress: (positionMs) => dispatch(progress(positionMs)),
-      onEnd: () => {
-        dispatch(finished(messageId));
-        // A receipt only makes sense for messages on the server, not my unsent ones.
-        if (!getState().outbox.items[messageId]) socket.send({ type: 'played', messageId });
-        playNext();
-      },
+    const { startMs, durationMs } = clipPlayer.play(bytes, fromMs, () => {
+      dispatch(finished(messageId));
+      // A receipt only makes sense for messages on the server, not my unsent ones.
+      if (!getState().outbox.items[messageId]) socket.send({ type: 'played', messageId });
+      playNext();
     });
-    dispatch(started({ messageId, positionMs: fromMs, durationMs }));
+    dispatch(started({ messageId, positionMs: startMs, durationMs }));
   }
 
   function playNext() {
@@ -78,9 +75,10 @@ export function createPlayback({ store, socket, showNotice, isSomeoneTalking }: 
     pauseForTalk() {
       const current = getState().playback.current;
       if (!current?.playing) return;
+      const positionMs = clipPlayer.positionMs();
       clipPlayer.stop();
-      pausedForTalk = { messageId: current.messageId, positionMs: current.positionMs };
-      dispatch(paused());
+      pausedForTalk = { messageId: current.messageId, positionMs };
+      dispatch(paused({ positionMs }));
     },
     /** Live talk ended: pick up where we stopped, or play the next queued message. */
     resumeAfterTalk() {
@@ -94,8 +92,9 @@ export function createPlayback({ store, socket, showNotice, isSomeoneTalking }: 
     toggle(messageId: string) {
       const current = getState().playback.current;
       if (current?.messageId === messageId && current.playing) {
+        const positionMs = clipPlayer.positionMs();
         clipPlayer.stop();
-        dispatch(paused());
+        dispatch(paused({ positionMs }));
         dispatch(clearQueue());
         return;
       }

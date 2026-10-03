@@ -1,7 +1,16 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
+export interface CurrentPlayback {
+  messageId: string;
+  durationMs: number;
+  playing: boolean;
+  // Where playback started, or where it was paused. It does not tick while
+  // playing: the progress pill animates from here by itself.
+  positionMs: number;
+}
+
 export interface PlaybackState {
-  current: { messageId: string; positionMs: number; durationMs: number; playing: boolean } | null;
+  current: CurrentPlayback | null;
   queue: string[]; // auto-play order, oldest first
   missed: string[]; // ids tagged MISSED until played to the end
 }
@@ -24,11 +33,10 @@ const playback = createSlice({
       state.current = { ...action.payload, playing: true };
       state.queue = state.queue.filter((id) => id !== action.payload.messageId);
     },
-    progress(state, action: PayloadAction<number>) {
-      if (state.current) state.current.positionMs = action.payload;
-    },
-    paused(state) {
-      if (state.current) state.current.playing = false;
+    paused(state, action: PayloadAction<{ positionMs: number }>) {
+      if (!state.current) return;
+      state.current.playing = false;
+      state.current.positionMs = action.payload.positionMs;
     },
     /** Played to the end: clears MISSED. Stopping halfway keeps it. */
     finished(state, action: PayloadAction<string>) {
@@ -41,5 +49,5 @@ const playback = createSlice({
   },
 });
 
-export const { markMissed, enqueue, clearQueue, started, progress, paused, finished, stopped } = playback.actions;
+export const { markMissed, enqueue, clearQueue, started, paused, finished, stopped } = playback.actions;
 export default playback.reducer;
