@@ -1,3 +1,4 @@
+import { startRecording, stopRecording } from '@/audio/recorder';
 import connection from '@/store/slices/connection';
 import floor from '@/store/slices/floor';
 import messages from '@/store/slices/messages';
@@ -216,5 +217,52 @@ describe('talk: no signal and failures', () => {
     expect(myTalk()).toBeNull();
     expect(outbox.discard).toHaveBeenCalled();
     expect(showNotice).toHaveBeenCalledWith('Could not open the microphone');
+  });
+});
+
+describe('talk: releasing the button', () => {
+  /** The next mic stop takes as long as the test wants, like the native recorder. */
+  function slowMicStop() {
+    let finish!: () => void;
+    vi.mocked(stopRecording).mockImplementationOnce(
+      () => new Promise((resolve) => (finish = () => resolve({ total: fakes.mic.chunks, durationMs: fakes.mic.chunks * 250 }))),
+    );
+    return () => finish();
+  }
+
+  it('the button changes as the finger lifts, without waiting for the mic to stop', async () => {
+    const finishStopping = slowMicStop();
+    const { talk, myTalk, outbox } = setup({ network: 'offline' });
+    await talk.begin();
+    const clipId = myTalk()!.clipId;
+    speak(4);
+
+    const ending = talk.end();
+    expect(myTalk()).toBeNull(); // idle at once
+    await vi.advanceTimersByTimeAsync(0);
+    expect(outbox.finish).not.toHaveBeenCalled(); // the clip is still being closed
+
+    finishStopping();
+    await ending;
+    expect(outbox.finish).toHaveBeenCalledWith(clipId, 4, 1000);
+  });
+
+  it('a quick second press opens the mic only once the previous recording has stopped', async () => {
+    const finishStopping = slowMicStop();
+    const { talk, myTalk } = setup({ network: 'offline' });
+    vi.mocked(startRecording).mockClear();
+    await talk.begin();
+    speak(4);
+
+    const ending = talk.end();
+    const starting = talk.begin();
+    expect(myTalk()?.mode).toBe('local'); // the button shows the new recording straight away
+    await vi.advanceTimersByTimeAsync(0);
+    expect(startRecording).toHaveBeenCalledTimes(1); // but the mic waits for the old one
+
+    finishStopping();
+    await ending;
+    await starting;
+    expect(startRecording).toHaveBeenCalledTimes(2);
   });
 });

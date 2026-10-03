@@ -46,6 +46,10 @@ export function createTalk({ store, socket, outbox, playback, showNotice }: Talk
 
   let activeRecording: ActiveRecording | null = null;
   let lastChunkAcknowledgedLive = -1;
+  // The recorder is one shared native object, and stopping it takes a moment.
+  // The button doesn't wait for that, so a quick second press waits here
+  // instead: a new recording starts only once the previous one has fully stopped.
+  let micReady: Promise<unknown> = Promise.resolve();
 
   /** Tell the server I'm done with the floor and there is no clip to commit (a tap, or a lost race). */
   function releaseFloorWithoutClip(clipId: string) {
@@ -107,18 +111,22 @@ export function createTalk({ store, socket, outbox, playback, showNotice }: Talk
     activeRecording = recording;
     streamPlayer.setMuted(true);
 
-    recording.micStarted = startRecording({
-      onChunk: (chunkIndex, bytes) => {
-        clipFiles.writeChunk(clipId, chunkIndex, bytes); // disk first, then the wire
-        if (activeRecording !== recording) return;
-        recording.recordedChunks = chunkIndex + 1;
-        if (myTalkMode() === 'live') {
-          sendChunkLive(recording, chunkIndex, bytes);
-          reportLiveBacklog(recording);
-        }
-      },
-      onLevel: (level) => dispatch(setLevel(level)),
-    });
+    recording.micStarted = micReady.then(() =>
+      startRecording({
+        onChunk: (chunkIndex, bytes) => {
+          clipFiles.writeChunk(clipId, chunkIndex, bytes); // disk first, then the wire
+          if (activeRecording !== recording) return;
+          recording.recordedChunks = chunkIndex + 1;
+          if (myTalkMode() === 'live') {
+            sendChunkLive(recording, chunkIndex, bytes);
+            reportLiveBacklog(recording);
+          }
+        },
+        onLevel: (level) => {
+          if (activeRecording === recording) dispatch(setLevel(level));
+        },
+      }),
+    );
 
     if (canStream) {
       socket.send({ type: 'floor_request', clipId, recordedAt });
@@ -144,8 +152,9 @@ export function createTalk({ store, socket, outbox, playback, showNotice }: Talk
     activeRecording = null;
     if (recording.floorAnswerTimer) clearTimeout(recording.floorAnswerTimer);
     clearTimeout(recording.maximumLengthTimer);
-    await recording.micStarted;
-    const { total, durationMs } = await stopRecording();
+    const stopping = recording.micStarted.then(() => stopRecording());
+    micReady = stopping.catch(() => {});
+    const { total, durationMs } = await stopping;
     streamPlayer.setMuted(false);
     dispatch(netEvent({ type: 'backlog', at: Date.now(), ms: 0 }));
     return { recording, total, durationMs };
@@ -154,8 +163,8 @@ export function createTalk({ store, socket, outbox, playback, showNotice }: Talk
   /** Throws the recording away: lost the race, or the mic failed. */
   async function discard() {
     const mode = myTalkMode();
-    const stopped = await stopMic();
     dispatch(stopMyTalk());
+    const stopped = await stopMic();
     if (!stopped) return;
     if (mode === 'live' || mode === 'pending') releaseFloorWithoutClip(stopped.recording.clipId);
     outbox.discard(stopped.recording.clipId);
@@ -165,8 +174,9 @@ export function createTalk({ store, socket, outbox, playback, showNotice }: Talk
   async function end() {
     const mode = myTalkMode();
     if (!activeRecording || !mode) return;
-    const stopped = await stopMic();
+    // The button reacts the moment the finger lifts; the mic finishes stopping in the background.
     dispatch(stopMyTalk());
+    const stopped = await stopMic();
     if (!stopped) return;
     const { recording, total, durationMs } = stopped;
 
