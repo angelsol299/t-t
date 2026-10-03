@@ -1,29 +1,17 @@
 import { AudioLines, Check, Mic, Pause, Play, Trash2 } from 'lucide-react-native';
-import { memo, useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
+import { memo } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useNow } from '@/hooks/useNow';
+import { registry } from '@/services/registry';
 import { useAppSelector } from '@/store';
 import type { Row } from '@/store/selectors';
 import { Design } from '@/theme/Design';
 import { formatClockTime, formatDuration, formatSentAgo } from '@/utils/format';
 
-export interface RowPlayState {
-  current: boolean; // this row is the one loaded in the player
-  playing: boolean;
-  durationMs: number; // length of the decoded audio actually playing
-  next: boolean; // next in the auto-play queue
-}
-
-/** Shared by every row that isn't loaded in the player, so memo() can skip them. */
-export const IDLE_PLAY_STATE: RowPlayState = { current: false, playing: false, durationMs: 0, next: false };
-export const NEXT_PLAY_STATE: RowPlayState = { ...IDLE_PLAY_STATE, next: true };
-
 interface Props {
   row: Row;
-  play: RowPlayState;
-  now: number;
-  onPlay: (id: string) => void;
-  onDelete: (id: string) => void;
-  onRetry: (id: string) => void;
+  playing: boolean; // this row is playing right now
+  next: boolean; // next in the auto-play queue
 }
 
 function YouChip() {
@@ -35,57 +23,34 @@ function YouChip() {
   );
 }
 
-/**
- * Clip length; while loaded in the player it doubles as the progress bar.
- * The fill runs as one native animation timed to the remaining audio, so it
- * lands on 100% exactly as playback ends. Progress ticks (every 100ms) only
- * resync it on start, pause and resume.
- */
-function LengthPill({ messageId, ms, play }: { messageId: string; ms: number; play?: RowPlayState }) {
+/** Clip length; while loaded in the player it doubles as the progress bar. */
+function LengthPill({ messageId, ms }: { messageId: string; ms: number }) {
   const lengthLabel = formatDuration(ms);
-  const [progress] = useState(() => new Animated.Value(0));
-  const active = !!play;
-  const playing = !!play?.playing;
-  const total = play?.durationMs || ms;
-  // Only the row loaded in the player follows the position (updated every 100ms).
-  const positionMs = useAppSelector((state) =>
-    active && state.playback.current?.messageId === messageId ? state.playback.current.positionMs : 0,
-  );
-  const position = useRef(0);
-
-  useEffect(() => {
-    position.current = positionMs;
-  });
-
-  useEffect(() => {
-    if (!active || total <= 0) {
-      progress.setValue(0);
-      return;
-    }
-    const from = Math.min(1, position.current / total);
-    progress.setValue(from);
-    if (!playing) return;
-    const animation = Animated.timing(progress, {
-      toValue: 1,
-      duration: Math.max(0, total * (1 - from)),
-      easing: Easing.linear,
-      useNativeDriver: true,
-    });
-    animation.start();
-    return () => animation.stop();
-  }, [active, playing, total, progress]);
+  // Only the row loaded in the player gets a value here, so only it re-renders
+  // on the 100ms progress ticks.
+  const current = useAppSelector((state) => (state.playback.current?.messageId === messageId ? state.playback.current : null));
+  const total = current?.durationMs || ms;
+  const percent = current && total > 0 ? Math.min(100, (current.positionMs / total) * 100) : 0;
 
   return (
     <View
-      style={[styles.length, active && styles.lengthActive]}
+      style={[styles.length, current && styles.lengthActive]}
       accessible
-      accessibilityLabel={active ? `Length ${lengthLabel}, ${formatDuration(positionMs)} played` : `Length ${lengthLabel}`}
+      accessibilityLabel={
+        current ? `Length ${lengthLabel}, ${formatDuration(current.positionMs)} played` : `Length ${lengthLabel}`
+      }
     >
-      {active && <Animated.View style={[styles.lengthFill, { transform: [{ scaleX: progress }] }]} />}
+      {current && <View style={[styles.lengthFill, { width: `${percent}%` }]} />}
       <AudioLines size={12} color={Design.color.ink} strokeWidth={2.4} />
       <Text style={[Design.typography.pill, { color: Design.color.ink }]}>{lengthLabel}</Text>
     </View>
   );
+}
+
+/** "Sent 2 min ago": ticks on its own so the rest of the list doesn't re-render. */
+function SentAgoTag({ at }: { at: number }) {
+  const now = useNow(true, 30_000);
+  return <Tag text={formatSentAgo(at, now)} background={Design.color.neutral200} foreground={Design.color.neutral700} />;
 }
 
 function Tag({ text, background, foreground, caps }: { text: string; background: string; foreground: string; caps?: boolean }) {
@@ -129,7 +94,7 @@ function Bar({ percent, track, fill }: { percent: number; track: string; fill: s
   );
 }
 
-function MessageRowImpl({ row, play, now, onPlay, onDelete, onRetry }: Props) {
+function MessageRowImpl({ row, playing, next }: Props) {
   const sender = row.mine ? (
     <YouChip />
   ) : (
@@ -161,7 +126,7 @@ function MessageRowImpl({ row, play, now, onPlay, onDelete, onRetry }: Props) {
   let meta: React.ReactNode;
   switch (row.receipt.kind) {
     case 'time':
-      meta = <Text style={styles.meta}>{play.next ? `Next · ${formatClockTime(row.at)}` : formatClockTime(row.at)}</Text>;
+      meta = <Text style={styles.meta}>{next ? `Next · ${formatClockTime(row.at)}` : formatClockTime(row.at)}</Text>;
       break;
     case 'heard':
       meta = (
@@ -181,7 +146,11 @@ function MessageRowImpl({ row, play, now, onPlay, onDelete, onRetry }: Props) {
       break;
     case 'failed':
       meta = (
-        <Pressable onPress={() => onRetry(row.id)} accessibilityRole="button" accessibilityLabel="Not sent. Tap to retry">
+        <Pressable
+          onPress={() => registry.controller?.retryClip(row.id)}
+          accessibilityRole="button"
+          accessibilityLabel="Not sent. Tap to retry"
+        >
           <Tag text="Not sent · Retry" background={Design.color.offlineBg} foreground={Design.color.offline} />
         </Pressable>
       );
@@ -195,16 +164,14 @@ function MessageRowImpl({ row, play, now, onPlay, onDelete, onRetry }: Props) {
       <View style={styles.lead}>
         {sender}
         {row.missed && <Tag text="MISSED" background={Design.color.offlineBg} foreground={Design.color.offline} caps />}
-        <LengthPill messageId={row.id} ms={row.durationMs} play={play.current ? play : undefined} />
-        {row.late && (
-          <Tag text={formatSentAgo(row.at, now)} background={Design.color.neutral200} foreground={Design.color.neutral700} />
-        )}
+        <LengthPill messageId={row.id} ms={row.durationMs} />
+        {row.late && <SentAgoTag at={row.at} />}
         {row.cutShort && <Tag text="Cut short" background={Design.color.neutral200} foreground={Design.color.neutral700} />}
       </View>
       {meta}
       {deletable && (
         <Pressable
-          onPress={() => onDelete(row.id)}
+          onPress={() => registry.controller?.deleteQueued(row.id)}
           style={styles.delete}
           accessibilityRole="button"
           accessibilityLabel="Delete"
@@ -213,7 +180,7 @@ function MessageRowImpl({ row, play, now, onPlay, onDelete, onRetry }: Props) {
           <Trash2 size={16} color={Design.color.offline} strokeWidth={2} />
         </Pressable>
       )}
-      <PlayButton playing={play.playing} onPress={() => onPlay(row.id)} label={senderDescription} />
+      <PlayButton playing={playing} onPress={() => registry.controller?.togglePlay(row.id)} label={senderDescription} />
     </View>
   );
 }
@@ -266,10 +233,8 @@ const styles = StyleSheet.create({
   lengthFill: {
     position: 'absolute',
     top: 0,
-    right: 0,
     bottom: 0,
     left: 0,
-    transformOrigin: 'left',
     backgroundColor: Design.color.live,
   },
   tag: { paddingVertical: Design.space.xsmall, paddingHorizontal: Design.space.small, borderRadius: Design.radius.pill },

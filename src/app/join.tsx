@@ -91,7 +91,7 @@ export default function Join() {
           accessibilityRole="button"
           accessibilityLabel={edit ? 'Save name' : `Join ${CHANNEL_NAME}`}
           accessibilityState={{ disabled: !trimmed }}
-          style={({ pressed }) => [styles.cta, (!trimmed || pressed) && { opacity: trimmed ? 0.9 : 0.4 }]}
+          style={({ pressed }) => [styles.cta, { opacity: !trimmed ? 0.4 : pressed ? 0.9 : 1 }]}
         >
           <Text style={[Design.typography.cta, { color: Design.color.ground }]}>
             {edit ? 'Save name' : `Join ${CHANNEL_NAME}`}

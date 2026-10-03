@@ -42,8 +42,6 @@ export namespace Design {
     talkBg: '#dce7fb',
     talkSecondary: '#2a4d8f',
   } as const;
-  export type ColorName = keyof typeof color;
-  export type ColorValue = (typeof color)[ColorName];
 
   export const fontFamily = {
     regular: 'Archivo_400Regular',
@@ -169,12 +167,8 @@ export namespace Design {
    * ```
    */
   export const space = {
-    /** size: 48 */
-    hero: 48,
     /** size: 40 */
     xxxlarge: 40,
-    /** size: 32 */
-    xxlarge: 32,
     /** size: 24 */
     xlarge: 24,
     /** size: 20 (screen gutter) */

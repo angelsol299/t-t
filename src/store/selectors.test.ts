@@ -1,7 +1,7 @@
 import type { RootState } from '@/store';
 import type { ChannelMessage } from '@shared/protocol';
 import { describe, expect, it } from 'vitest';
-import { selectNowPlaying, selectPushToTalkState, selectRows, selectSubtitle } from './selectors';
+import { selectPushToTalkState, selectRows, selectSubtitle } from './selectors';
 import connection from './slices/connection';
 import floor from './slices/floor';
 import messages from './slices/messages';
@@ -180,20 +180,5 @@ describe('selectRows', () => {
       },
     });
     expect(selectRows(state).map((row) => row.id)).toEqual(['committed']);
-  });
-});
-
-describe('selectNowPlaying', () => {
-  it('ignores position updates, so the message list does not re-render on every progress tick', () => {
-    const current = { messageId: 'a', positionMs: 100, durationMs: 3000, playing: true };
-    const before = makeState({ playback: { current, queue: ['b'] } });
-    const after = makeState({ playback: { current: { ...current, positionMs: 200 }, queue: ['b'] } });
-    expect(selectNowPlaying(after)).toBe(selectNowPlaying(before));
-    expect(selectNowPlaying(before)).toEqual({ messageId: 'a', playing: true, durationMs: 3000, nextMessageId: 'b' });
-  });
-
-  it('there is no "next" while nothing is playing', () => {
-    const state = makeState({ playback: { current: null, queue: ['b'] } });
-    expect(selectNowPlaying(state).nextMessageId).toBeNull();
   });
 });

@@ -83,13 +83,40 @@ function accessibilityLabelFor(state: PushToTalkState): string {
 function Face({ state, color }: { state: PushToTalkState; color: string }) {
   switch (state.kind) {
     case 'idle':
-      return <HoldToTalkFace caption={state.offline ? 'Sends when back online' : 'Push to talk'} color={color} />;
     case 'pending':
-      return <HoldToTalkFace caption="Push to talk" color={color} />;
+      return (
+        <HoldToTalkFace
+          caption={state.kind === 'idle' && state.offline ? 'Sends when back online' : 'Push to talk'}
+          color={color}
+        />
+      );
+    // 03: I hold the floor and everyone hears me.
     case 'live':
-      return <LiveFace startedAt={state.startedAt} listeners={state.listeners} level={state.level} color={color} />;
+      return (
+        <TalkingFace
+          title="On air"
+          caption={`${state.listeners} hear you`}
+          headline={'You’re\nlive'}
+          startedAt={state.startedAt}
+          level={state.level}
+          color={color}
+          warnColor={Design.color.weakText}
+        />
+      );
+    // Weak or no signal: recording on the phone, sent when complete or back online. Deliberately not green.
     case 'local':
-      return <RecordingFace startedAt={state.startedAt} level={state.level} offline={state.offline} color={color} />;
+      return (
+        <TalkingFace
+          title="Recording"
+          caption={state.offline ? 'Sends when back online' : 'Sends when complete'}
+          captionColor={Design.color.neutral700}
+          headline={'Saving\nmessage'}
+          startedAt={state.startedAt}
+          level={state.level}
+          color={color}
+          warnColor={Design.color.offline}
+        />
+      );
     case 'receiving':
       return <ReceivingFace name={state.name} startedAt={state.startedAt} level={state.level} color={color} />;
     case 'micOff':
@@ -109,57 +136,36 @@ function HoldToTalkFace({ caption, color }: { caption: string; color: string }) 
   );
 }
 
-/** 03: I hold the floor and everyone hears me. */
-function LiveFace({
+/** While I'm talking, live or recording to send later. */
+function TalkingFace({
+  title,
+  caption,
+  captionColor,
+  headline,
   startedAt,
-  listeners,
   level,
   color,
+  warnColor,
 }: {
+  title: string;
+  caption: string;
+  captionColor?: string;
+  headline: string;
   startedAt: number;
-  listeners: number;
   level: number;
   color: string;
+  warnColor: string;
 }) {
   return (
     <>
       <View style={styles.top}>
-        <Text style={[Design.typography.caps, { color }]}>On air</Text>
-        <Text style={[Design.typography.caps, { color }]}>{listeners} hear you</Text>
+        <Text style={[Design.typography.caps, { color }]}>{title}</Text>
+        <Text style={[Design.typography.caps, { color: captionColor ?? color }]}>{caption}</Text>
       </View>
       <LevelMeter level={level} bars={16} color={color} />
       <View style={styles.bottom}>
-        <Text style={[Design.typography.headline, { color }]}>{'You’re\nlive'}</Text>
-        <Timer startedAt={startedAt} color={color} warnColor={Design.color.weakText} />
-      </View>
-    </>
-  );
-}
-
-/** Weak or no signal: recording on the phone, sent when complete or back online. Deliberately not green. */
-function RecordingFace({
-  startedAt,
-  level,
-  offline,
-  color,
-}: {
-  startedAt: number;
-  level: number;
-  offline: boolean;
-  color: string;
-}) {
-  return (
-    <>
-      <View style={styles.top}>
-        <Text style={[Design.typography.caps, { color }]}>Recording</Text>
-        <Text style={[Design.typography.caps, { color: Design.color.neutral700 }]}>
-          {offline ? 'Sends when back online' : 'Sends when complete'}
-        </Text>
-      </View>
-      <LevelMeter level={level} bars={16} color={color} />
-      <View style={styles.bottom}>
-        <Text style={[Design.typography.headline, { color }]}>{'Saving\nmessage'}</Text>
-        <Timer startedAt={startedAt} color={color} warnColor={Design.color.offline} />
+        <Text style={[Design.typography.headline, { color }]}>{headline}</Text>
+        <Timer startedAt={startedAt} color={color} warnColor={warnColor} />
       </View>
     </>
   );

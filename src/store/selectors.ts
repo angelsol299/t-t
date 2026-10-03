@@ -79,22 +79,6 @@ export const selectRows = createSelector(
   },
 );
 
-/** Which clip is loaded in the player, without its position, so the list doesn't re-render on every progress tick. */
-export const selectNowPlaying = createSelector(
-  [
-    (state: RootState) => state.playback.current?.messageId ?? null,
-    (state: RootState) => state.playback.current?.playing ?? false,
-    (state: RootState) => state.playback.current?.durationMs ?? 0,
-    (state: RootState) => state.playback.queue[0] ?? null,
-  ],
-  (messageId, playing, durationMs, firstInQueue) => ({
-    messageId,
-    playing,
-    durationMs,
-    nextMessageId: playing ? firstInQueue : null,
-  }),
-);
-
 export const selectSavedCount = (state: RootState) =>
   Object.values(state.outbox.items).filter((entry) => entry.status !== 'recording').length;
 

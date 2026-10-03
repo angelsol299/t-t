@@ -27,6 +27,14 @@ const SPLASH_MIN_MS = 1200;
 const SPLASH_MAX_MS = 2000;
 
 export default function RootLayout() {
+  return (
+    <Provider store={store}>
+      <Root />
+    </Provider>
+  );
+}
+
+function Root() {
   const [fontsLoaded] = useFonts({
     Archivo_400Regular,
     Archivo_500Medium,
@@ -34,14 +42,6 @@ export default function RootLayout() {
     Archivo_700Bold,
     Archivo_800ExtraBold,
   });
-  return (
-    <Provider store={store}>
-      <Root fontsLoaded={fontsLoaded} />
-    </Provider>
-  );
-}
-
-function Root({ fontsLoaded }: { fontsLoaded: boolean }) {
   const name = useAppSelector((state) => state.session.name);
   const connected = useAppSelector((state) => state.connection.everConnected);
   const [minElapsed, setMinElapsed] = useState(false);
