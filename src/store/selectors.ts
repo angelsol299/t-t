@@ -2,7 +2,6 @@ import { createSelector } from '@reduxjs/toolkit';
 import type { Net } from '@shared/netMachine';
 import { isLate } from '@shared/protocol';
 import type { RootState } from './index';
-import type { PlaybackState } from './slices/playback';
 import type { OutboxEntry } from './slices/outbox';
 
 // Everything the screens show is derived here from the store, so components
@@ -153,9 +152,6 @@ export const selectHolding = (state: RootState) => state.floor.holding;
 export const selectName = (state: RootState) => state.session.name;
 export const selectHasName = (state: RootState) => !!state.session.name;
 
-/** The playback slot for `messageId`, or null when something else (or nothing) is loaded. */
-export const makeSelectCurrentPlayback = (messageId: string) =>
-  createSelector(
-    (state: RootState) => state.playback.current,
-    (current): PlaybackState['current'] => (current?.messageId === messageId ? current : null),
-  );
+/** The player's state for `messageId`, or null when something else (or nothing) is loaded. */
+export const selectPlaybackOf = (state: RootState, messageId: string) =>
+  state.playback.current?.messageId === messageId ? state.playback.current : null;

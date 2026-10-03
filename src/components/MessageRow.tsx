@@ -1,10 +1,10 @@
 import { AudioLines, Check, Mic, Pause, Play, Trash2 } from 'lucide-react-native';
-import { memo, useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { memo } from 'react';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNow } from '@/hooks/useNow';
 import { registry } from '@/services/registry';
 import { useAppSelector } from '@/store';
-import { makeSelectCurrentPlayback, type Row } from '@/store/selectors';
+import { selectPlaybackOf, type Row } from '@/store/selectors';
 import { Design } from '@/theme/Design';
 import { formatClockTime, formatDuration, formatSentAgo } from '@/utils/format';
 
@@ -113,8 +113,7 @@ function LengthPill({ messageId, ms }: { messageId: string; ms: number }) {
   const lengthLabel = formatDuration(ms);
   // Only the row loaded in the player gets a value here, so only it re-renders
   // on the 100ms progress ticks.
-  const selectCurrentPlayback = useMemo(() => makeSelectCurrentPlayback(messageId), [messageId]);
-  const current = useAppSelector(selectCurrentPlayback);
+  const current = useAppSelector((state) => selectPlaybackOf(state, messageId));
   const total = current?.durationMs || ms;
   const percent = current && total > 0 ? Math.min(100, (current.positionMs / total) * 100) : 0;
 
@@ -135,7 +134,7 @@ function LengthPill({ messageId, ms }: { messageId: string; ms: number }) {
 
 /** "Sent 2 min ago": ticks on its own so the rest of the list doesn't re-render. */
 function SentAgoTag({ at }: { at: number }) {
-  const now = useNow(true, 30_000);
+  const now = useNow(30_000);
   return <Tag text={formatSentAgo(at, now)} tone="neutral" />;
 }
 
@@ -149,10 +148,16 @@ function Tag({ text, tone, caps }: { text: string; tone: 'alert' | 'neutral'; ca
   );
 }
 
+/** Deleting an unsent clip loses it for good, and the button sits next to Play, so it asks first. */
 function DeleteButton({ clipId }: { clipId: string }) {
+  const confirmDelete = () =>
+    Alert.alert('Delete this message?', 'It has not been sent yet, so nobody will hear it.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => registry.controller?.deleteQueued(clipId) },
+    ]);
   return (
     <Pressable
-      onPress={() => registry.controller?.deleteQueued(clipId)}
+      onPress={confirmDelete}
       style={styles.delete}
       accessibilityRole="button"
       accessibilityLabel="Delete"

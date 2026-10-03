@@ -1,5 +1,4 @@
 import { Mic, MicOff } from 'lucide-react-native';
-import { useMemo } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useNow } from '@/hooks/useNow';
 import type { PushToTalkState } from '@/store/selectors';
@@ -9,6 +8,9 @@ import { MAX_CLIP_MS } from '@shared/protocol';
 
 // The big push-to-talk button. Each state has a look (colours and frame) and
 // a face (what's written on the button), defined separately below.
+
+// A finger that drifts while talking must not end the transmission.
+const PRESS_RETENTION = { top: 400, bottom: 200, left: 200, right: 200 };
 
 interface Props {
   state: PushToTalkState;
@@ -24,8 +26,7 @@ export function PttButton({ state, onPressIn, onPressOut }: Props) {
       onPressIn={micOff ? undefined : onPressIn}
       onPressOut={micOff ? undefined : onPressOut}
       onPress={micOff ? () => Linking.openSettings() : undefined}
-      // A finger that drifts while talking must not end the transmission.
-      pressRetentionOffset={{ top: 400, bottom: 200, left: 200, right: 200 }}
+      pressRetentionOffset={PRESS_RETENTION}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabelFor(state)}
       accessibilityHint={micOff ? undefined : 'Hold to talk, release to stop'}
@@ -208,14 +209,12 @@ function MicOffFace({ color }: { color: string }) {
 const BAR_SHAPE = [0.3, 0.6, 0.45, 0.9, 0.7, 0.35, 0.8, 1, 0.55, 0.25, 0.65, 0.85, 0.4, 0.2, 0.5, 0.75];
 
 function LevelMeter({ level, bars, color }: { level: number; bars: number; color: string }) {
-  const now = useNow(true, 120);
-  const heights = useMemo(() => {
-    const clampedLevel = Math.max(0.12, Math.min(1, level));
-    return Array.from({ length: bars }, (_, index) => {
-      const wobble = 0.75 + 0.25 * Math.sin(now / 90 + index * 1.7);
-      return Math.max(0.1, Math.min(1, BAR_SHAPE[index % BAR_SHAPE.length] * clampedLevel * wobble * 1.4));
-    });
-  }, [level, bars, now]);
+  const now = useNow(120); // a gentle wobble, so the meter looks alive between level updates
+  const clampedLevel = Math.max(0.12, Math.min(1, level));
+  const heights = Array.from({ length: bars }, (_, index) => {
+    const wobble = 0.75 + 0.25 * Math.sin(now / 90 + index * 1.7);
+    return Math.max(0.1, Math.min(1, BAR_SHAPE[index % BAR_SHAPE.length] * clampedLevel * wobble * 1.4));
+  });
   return (
     <View style={styles.meter} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
       {heights.map((height, index) => (
@@ -228,7 +227,7 @@ function LevelMeter({ level, bars, color }: { level: number; bars: number; color
 const WARN_BEFORE_MAX_MS = 10_000; // the timer changes colour for the last 10 seconds
 
 function Timer({ startedAt, color, warnColor }: { startedAt: number; color: string; warnColor?: string }) {
-  const now = useNow(true, 250);
+  const now = useNow(250);
   const elapsed = now - startedAt;
   const warn = warnColor && MAX_CLIP_MS - elapsed <= WARN_BEFORE_MAX_MS;
   return <Text style={[styles.timer, { color: warn ? warnColor : color }]}>{formatDuration(elapsed)}</Text>;

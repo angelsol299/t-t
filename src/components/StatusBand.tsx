@@ -35,7 +35,7 @@ interface OfflineProps {
 }
 
 export function OfflineBand({ since, saved, nextRetryAt, onRetry }: OfflineProps) {
-  const now = useNow(true, 500);
+  const now = useNow(500);
   const retryIn = nextRetryAt ? Math.max(0, Math.ceil((nextRetryAt - now) / 1000)) : null;
   const title = `Offline for ${formatDuration(now - since)}${saved > 0 ? ` — ${saved} saved` : ''}`;
   return (
