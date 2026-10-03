@@ -33,14 +33,19 @@
     "@types/react": "~19.2.2",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~57.0.2",
-    "typescript": "~6.0.3"
+    "prettier": "^3.9.9",
+    "typescript": "~6.0.3",
+    "vitest": "^3.2.0"
   },
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "test": "vitest run",
+    "format": "prettier --write \"{src,shared,server/src,simulator/src,simulator/tests}/**/*.{ts,tsx}\" vitest.config.ts",
+    "format:check": "prettier --check \"{src,shared,server/src,simulator/src,simulator/tests}/**/*.{ts,tsx}\" vitest.config.ts"
   },
   "private": true
 }

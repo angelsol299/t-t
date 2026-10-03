@@ -111,10 +111,21 @@ These start the real server on a temp directory, put each bot behind its own Tox
 
 The harness starts `toxiproxy-server` itself if one isn't already running.
 
+## App unit tests
+
+```bash
+npm test
+```
+
+These run in Node in well under a second (no simulator needed):
+- **The talk flow** (`talk.ts`), with a fake mic and socket: asking for the floor, streaming once granted (including what was recorded while waiting), falling back to record-and-send after 1s without an answer, ignoring a late grant, discarding a lost race or a tap under 300ms, recording locally when offline or weak, the 60s cap, and a mic that fails to open.
+- **The selectors**: what the push-to-talk button and the subtitle show in each state, and the receipt on each message row. They also check that a selector returns the same object when nothing relevant changed, which is what keeps the screen from re-rendering on every voice-level or playback-progress update.
+
 ## Checks
 
 ```bash
-npx tsc --noEmit && npx expo lint      # app
+npx tsc --noEmit && npx expo lint && npm test     # app
+npm run format:check                              # formatting (.prettierrc); npm run format to fix
 (cd server && npm run typecheck)
 (cd simulator && npm run typecheck && npm test)
 ```
@@ -124,9 +135,9 @@ npx tsc --noEmit && npx expo lint      # app
 ```
 src/app/            routes: _layout (fonts, splash hold, controller start), join (01), channel (02–08)
 src/components/     TopBar, ChannelHeader, StatusBand, MessageList/Row, PttButton, FloorDeniedCard, Splash, Logo
-src/services/       controller (PTT, floor, playback), socket (heartbeat, backoff), outbox (resumable upload), db, files
+src/services/       controller (creates and wires the parts below), talk (record, go live, hand off to the outbox), serverEvents (one handler per server message), playback (queue, pause for live talk), socket (heartbeat, backoff), outbox (resumable upload), db, files, haptics
 src/audio/          recorder (mic → µ-law chunks), streamPlayer (live, jitter buffer), clipPlayer, tone
-src/store/          Redux Toolkit slices (incl. the message list), selectors (one receipt per row)
+src/store/          Redux Toolkit slices, selectors (button state, subtitle, one receipt per row), persistence (what survives a restart)
 shared/             protocol.ts, mulaw.ts, netMachine.ts
 server/src/         index (boot + wiring), channel (one handler per WS message), clients (presence), floor (floor + lease), messages (chunks → commit → receipts), http (route table), database, clips
 simulator/          cli + scenarios, bots + REPL, tests, samples/
