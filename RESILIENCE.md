@@ -53,7 +53,7 @@ I matched the handoff's colours, type, spacing and copy exactly (tokens in the `
 
 | # | Gap in the design | Decision |
 |---|---|---|
-| 1 | Microphone permission denied has no state | The button turns outlined with "MICROPHONE OFF · Allow microphone", and tapping it opens Settings |
+| 1 | Microphone permission denied has no state | An alert explains why the mic is needed and offers "Open Settings" as soon as the app detects the denial. The button also turns outlined with "MICROPHONE OFF · Allow microphone", and tapping it opens Settings |
 | 2 | The splash is "held until the socket is up", which hangs forever with no signal | Hold for at most 2s, then open in the offline state. Recording works offline. |
 | 3 | "Not sent" (manual retry) has no trigger | Auto-retry forever by default. Manual retry appears only for errors that retrying can't fix. |
 | 4 | An accidental tap would create an empty clip | Holds under 300ms are discarded, with a gentle "Hold the button to talk" hint |

@@ -3,6 +3,7 @@ import type { AppStore } from '@/store';
 import { netEvent, setNextRetry } from '@/store/slices/connection';
 import { setHolding, setMicDenied, setMyTalkMode, setNotice } from '@/store/slices/floor';
 import NetInfo from '@react-native-community/netinfo';
+import { Alert, Linking } from 'react-native';
 import { createOutbox } from './outbox';
 import { createPlayback } from './playback';
 import { registry } from './registry';
@@ -90,6 +91,16 @@ export function createController(store: AppStore) {
       outbox.restore();
       const granted = (await micPermission(false)) || (await micPermission(true));
       dispatch(setMicDenied(!granted));
+      if (!granted) {
+        Alert.alert(
+          'Microphone access needed',
+          'Teton Talk needs your microphone to talk on the channel. Turn it on in Settings.',
+          [
+            { text: 'Not now', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ],
+        );
+      }
       socket.start();
     },
     stop() {
