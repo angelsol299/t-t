@@ -1,3 +1,4 @@
+import { registry } from '@/services/registry';
 import { useAppSelector } from '@/store';
 import { selectMissedOnReturn, selectNet, selectNextRetryAt, selectOfflineSince, selectSavedCount } from '@/store/selectors';
 import { BackOnlineBand, OfflineBand, WeakBand } from '../StatusBand';
