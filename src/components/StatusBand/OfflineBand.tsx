@@ -1,31 +1,9 @@
-import { Phone, RotateCcw, RotateCw } from 'lucide-react-native';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { RECEPTION_PHONE } from '@/config';
 import { useNow } from '@/hooks/useNow';
 import { Design } from '@/theme/Design';
 import { formatDuration } from '@/utils/format';
-
-export function WeakBand() {
-  return (
-    <View style={[styles.band, styles.weak]} accessibilityLiveRegion="polite">
-      <Text style={styles.weakText}>Weak signal — messages may be slow</Text>
-    </View>
-  );
-}
-
-export function BackOnlineBand({ missed, onReplay }: { missed: number; onReplay: () => void }) {
-  return (
-    <View style={[styles.band, styles.backOnline]} accessibilityLiveRegion="polite">
-      <Text style={styles.backOnlineText}>{missed > 0 ? `Back online — ${missed} missed` : 'Back online'}</Text>
-      {missed > 0 && (
-        <Pressable onPress={onReplay} style={styles.ghost} accessibilityRole="button" accessibilityLabel="Replay all">
-          <RotateCcw size={14} color={Design.color.backText} strokeWidth={2.2} />
-          <Text style={styles.backOnlineText}>Replay all</Text>
-        </Pressable>
-      )}
-    </View>
-  );
-}
+import { Phone, RotateCw } from 'lucide-react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 interface OfflineProps {
   since: number;
@@ -79,24 +57,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Design.space.regular,
     borderRadius: Design.radius.card,
   },
-  weak: { backgroundColor: Design.color.weakBg },
-  weakText: { ...Design.typography.band, color: Design.color.weakText },
-  backOnline: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 0,
-    minHeight: Design.layout.minimumTouchTarget,
-    backgroundColor: Design.color.backBg,
-  },
-  backOnlineText: { ...Design.typography.band, color: Design.color.backText },
-  ghost: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Design.space.xsmall,
-    minHeight: Design.layout.minimumTouchTarget,
-    paddingHorizontal: Design.space.xsmall,
-  },
+
   offline: {
     backgroundColor: Design.color.offlineBg,
     paddingTop: Design.space.medium,

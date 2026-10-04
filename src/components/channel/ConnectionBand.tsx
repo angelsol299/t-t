@@ -1,7 +1,9 @@
 import { registry } from '@/services/registry';
 import { useAppSelector } from '@/store';
 import { selectMissedOnReturn, selectNet, selectNextRetryAt, selectOfflineSince, selectSavedCount } from '@/store/selectors';
-import { BackOnlineBand, OfflineBand, WeakBand } from '../StatusBand';
+import { BackOnlineBand } from '../StatusBand/BackOnlineBand';
+import { OfflineBand } from '../StatusBand/OfflineBand';
+import { WeakBand } from '../StatusBand/WeakBand';
 
 export function ConnectionBand() {
   const network = useAppSelector(selectNet);
