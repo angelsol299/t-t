@@ -1,7 +1,10 @@
+import { useAppSelector } from '@/store';
+import { selectSubtitle } from '@/store/selectors';
 import { Design } from '@/theme/Design';
 import { StyleSheet, Text, View } from 'react-native';
 
-export function ChannelHeader({ name, subtitle }: { name: string; subtitle: string }) {
+export function ChannelHeader({ name }: { name: string }) {
+  const subtitle = useAppSelector(selectSubtitle);
   return (
     <View style={styles.wrap}>
       <Text style={styles.title} accessibilityRole="header">
