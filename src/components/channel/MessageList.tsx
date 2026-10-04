@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { useAppSelector } from '@/store';
 import { selectNextId, selectPlayingId, selectRows, type Row } from '@/store/selectors';
 import { Design } from '@/theme/Design';
-import { MessageRow } from './MessageRow';
+import { useEffect, useMemo, useRef } from 'react';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { MessageRow } from '../MessageRow';
 
 // Newest at the bottom, like a chat: an inverted list starts at the newest
 // row and stays put when you scroll up to replay an older clip.

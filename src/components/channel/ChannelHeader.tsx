@@ -1,5 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
 import { Design } from '@/theme/Design';
+import { StyleSheet, Text, View } from 'react-native';
 
 export function ChannelHeader({ name, subtitle }: { name: string; subtitle: string }) {
   return (

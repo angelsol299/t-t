@@ -3,7 +3,7 @@ import { useAppSelector } from '@/store';
 import { selectMissedOnReturn, selectNet, selectNextRetryAt, selectOfflineSince, selectSavedCount } from '@/store/selectors';
 import { BackOnlineBand, OfflineBand, WeakBand } from '../StatusBand';
 
-export const ConnectionBand = () => {
+export function ConnectionBand() {
   const network = useAppSelector(selectNet);
   const offlineSince = useAppSelector(selectOfflineSince);
   const nextRetryAt = useAppSelector(selectNextRetryAt);
@@ -20,4 +20,4 @@ export const ConnectionBand = () => {
     return <BackOnlineBand missed={missedOnReturn ?? 0} onReplay={() => registry.controller?.replayAll()} />;
   }
   return null;
-};
+}

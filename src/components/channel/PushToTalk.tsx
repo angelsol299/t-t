@@ -3,7 +3,7 @@ import { useAppSelector } from '@/store';
 import { selectPushToTalkState } from '@/store/selectors';
 import { PttButton } from '../PttButton';
 
-export const PushToTalk = () => {
+export function PushToTalk() {
   const state = useAppSelector(selectPushToTalkState);
   return (
     <PttButton
@@ -12,4 +12,4 @@ export const PushToTalk = () => {
       onPressOut={() => registry.controller?.pressOut()}
     />
   );
-};
+}

@@ -1,9 +1,9 @@
+import { ChannelHeader } from '@/components/channel/ChannelHeader';
 import { ChannelTopBar } from '@/components/channel/ChannelTopBar';
 import { ConnectionBand } from '@/components/channel/ConnectionBand';
 import { LostRaceCard } from '@/components/channel/LostRaceCard';
+import { MessageList } from '@/components/channel/MessageList';
 import { PushToTalk } from '@/components/channel/PushToTalk';
-import { ChannelHeader } from '@/components/ChannelHeader';
-import { MessageList } from '@/components/MessageList';
 import { CHANNEL_NAME } from '@/config';
 import { useAppSelector } from '@/store';
 import { selectSubtitle } from '@/store/selectors';
