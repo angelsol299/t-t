@@ -1,6 +1,3 @@
-import { router } from 'expo-router';
-import { StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChannelHeader } from '@/components/ChannelHeader';
 import { FloorDeniedCard } from '@/components/FloorDeniedCard';
 import { MessageList } from '@/components/MessageList';
@@ -23,6 +20,9 @@ import {
   selectTopBarNet,
 } from '@/store/selectors';
 import { Design } from '@/theme/Design';
+import { router } from 'expo-router';
+import { StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 /**
  * 02–08: one screen; every state is driven by the store.
