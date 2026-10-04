@@ -1,9 +1,9 @@
+import { ChannelTopBar } from '@/components/channel/ChannelTopBar';
+import { PushToTalk } from '@/components/channel/PushToTalk';
 import { ChannelHeader } from '@/components/ChannelHeader';
 import { FloorDeniedCard } from '@/components/FloorDeniedCard';
 import { MessageList } from '@/components/MessageList';
-import { PttButton } from '@/components/PttButton';
 import { BackOnlineBand, OfflineBand, WeakBand } from '@/components/StatusBand';
-import { TopBar } from '@/components/TopBar';
 import { CHANNEL_NAME } from '@/config';
 import { registry } from '@/services/registry';
 import { useAppSelector } from '@/store';
@@ -14,13 +14,10 @@ import {
   selectNet,
   selectNextRetryAt,
   selectOfflineSince,
-  selectPushToTalkState,
   selectSavedCount,
   selectSubtitle,
-  selectTopBarNet,
 } from '@/store/selectors';
 import { Design } from '@/theme/Design';
-import { router } from 'expo-router';
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -41,11 +38,6 @@ export default function Channel() {
       <PushToTalk />
     </SafeAreaView>
   );
-}
-
-function ChannelTopBar() {
-  const network = useAppSelector(selectTopBarNet);
-  return <TopBar net={network} onLongPressBrand={() => router.push('/join?edit=1')} />;
 }
 
 /** The weak / offline / back-online band under the header, if any. */
@@ -73,17 +65,6 @@ function LostRaceCard() {
   const lostRaceTo = useAppSelector(selectLostRaceTo);
   const holding = useAppSelector(selectHolding);
   return lostRaceTo && holding ? <FloorDeniedCard name={lostRaceTo.name} /> : null;
-}
-
-function PushToTalk() {
-  const state = useAppSelector(selectPushToTalkState);
-  return (
-    <PttButton
-      state={state}
-      onPressIn={() => registry.controller?.pressIn()}
-      onPressOut={() => registry.controller?.pressOut()}
-    />
-  );
 }
 
 const styles = StyleSheet.create({
