@@ -1,31 +1,16 @@
 import { ChannelTopBar } from '@/components/channel/ChannelTopBar';
+import { ConnectionBand } from '@/components/channel/ConnectionBand';
+import { LostRaceCard } from '@/components/channel/LostRaceCard';
 import { PushToTalk } from '@/components/channel/PushToTalk';
 import { ChannelHeader } from '@/components/ChannelHeader';
-import { FloorDeniedCard } from '@/components/FloorDeniedCard';
 import { MessageList } from '@/components/MessageList';
-import { BackOnlineBand, OfflineBand, WeakBand } from '@/components/StatusBand';
 import { CHANNEL_NAME } from '@/config';
-import { registry } from '@/services/registry';
 import { useAppSelector } from '@/store';
-import {
-  selectHolding,
-  selectLostRaceTo,
-  selectMissedOnReturn,
-  selectNet,
-  selectNextRetryAt,
-  selectOfflineSince,
-  selectSavedCount,
-  selectSubtitle,
-} from '@/store/selectors';
+import { selectSubtitle } from '@/store/selectors';
 import { Design } from '@/theme/Design';
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-/**
- * 02–08: one screen; every state is driven by the store.
- * Each part below reads only the store values it shows, so a change (for
- * example the voice level, about 11 times a second) re-renders only that part.
- */
 export default function Channel() {
   const subtitle = useAppSelector(selectSubtitle);
   return (
@@ -38,33 +23,6 @@ export default function Channel() {
       <PushToTalk />
     </SafeAreaView>
   );
-}
-
-/** The weak / offline / back-online band under the header, if any. */
-function ConnectionBand() {
-  const network = useAppSelector(selectNet);
-  const offlineSince = useAppSelector(selectOfflineSince);
-  const nextRetryAt = useAppSelector(selectNextRetryAt);
-  const missedOnReturn = useAppSelector(selectMissedOnReturn);
-  const saved = useAppSelector(selectSavedCount);
-
-  if (network === 'weak') return <WeakBand />;
-  if (network === 'offline' && offlineSince !== null) {
-    return (
-      <OfflineBand since={offlineSince} saved={saved} nextRetryAt={nextRetryAt} onRetry={() => registry.controller?.retryNow()} />
-    );
-  }
-  if (network === 'recovering') {
-    return <BackOnlineBand missed={missedOnReturn ?? 0} onReplay={() => registry.controller?.replayAll()} />;
-  }
-  return null;
-}
-
-/** 08: only while I'm still holding after losing a simultaneous-press race. */
-function LostRaceCard() {
-  const lostRaceTo = useAppSelector(selectLostRaceTo);
-  const holding = useAppSelector(selectHolding);
-  return lostRaceTo && holding ? <FloorDeniedCard name={lostRaceTo.name} /> : null;
 }
 
 const styles = StyleSheet.create({
