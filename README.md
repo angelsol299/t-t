@@ -12,7 +12,13 @@ How it stays resilient, and the UX decisions behind it, are in **[RESILIENCE.md]
 ## Prerequisites
 
 - **Node 22.13+.** The server uses the built-in `node:sqlite`, so there's no native database build.
-- **Xcode** (iOS simulator or a device) and/or **Android Studio** (emulator). The app uses a native audio module (`react-native-audio-api`), so it needs a **development build**. Expo Go won't work.
+- **Xcode** (iOS simulator or a device) and/or **Android Studio** (emulator). The app uses a native audio module (`react-native-audio-api`), so it needs a **development build** — **Expo Go won't work** (it only bundles Expo's own native modules). Build and run it with `npx expo run:ios` / `npx expo run:android` instead; see **Run it** below.
+- **For Android: JDK 21.** Android Studio's own bundled JDK is often newer (24+) than this project's Gradle/AGP toolchain fully supports — on JDK 24+, native module builds (`react-native-worklets`, `react-native-screens`) fail with `WARNING: A restricted method in java.lang.System has been called`, which Android Gradle Plugin misreports as a build error. Install a real JDK 21 and point `JAVA_HOME` at it before running Android builds:
+  ```bash
+  brew install openjdk@21
+  export JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.12.1/libexec/openjdk.jdk/Contents/Home
+  ```
+  (A plain JRE, e.g. one bundled with an editor extension, isn't enough — the build also needs `jlink`, which only ships with a full JDK.) See Troubleshooting below for the exact error.
 - **Toxiproxy**, for the simulator: `brew install toxiproxy`, or use Docker (see below).
 
 ## Run it
@@ -58,6 +64,9 @@ npx expo run:ios --device
 - **"No development build (com.teton.talk) is installed"**: the build is installed per simulator. Install it on the one you picked with `npx expo run:ios --device "<simulator name>"`.
 - **Port 8081 is busy** (another project's Metro): use another port, e.g. `npx expo run:ios --port 8082`, or `npx expo start --dev-client --port 8082`.
 - **iOS 27 crash at launch** (`…NoSceneLifecycleAdoption`): iOS 27 requires the UIScene life cycle. `plugins/withSceneLifecycle.js` adopts it during prebuild. If your `ios/` folder predates that plugin, regenerate it with `npx expo prebuild --platform ios --clean`.
+- **Android build fails with `Execution failed for task ':react-native-worklets:configureCMakeDebug[arm64-v8a]'. > WARNING: A restricted method in java.lang.System has been called`** (also seen on `react-native-screens`): your `JAVA_HOME` is JDK 24+ (Android Studio's bundled JBR, for example). Switch to JDK 21 (see Prerequisites) and re-run.
+- **Android build instead fails with `jlink executable ... does not exist`**: `JAVA_HOME` points at a JRE, not a full JDK (some editor extensions bundle a JRE-only runtime). Point it at a proper JDK 21 install instead, e.g. `brew install openjdk@21`.
+- **First Android build is very slow / looks stuck after "Welcome to Gradle"**: normal the first time — Gradle is auto-downloading the NDK, platform, and build-tools versions this project needs. Let it run; subsequent builds are fast.
 
 ## Simulate a bad network
 
@@ -82,15 +91,21 @@ Each scenario resets the link first. Add `--target bots` or `--target all` to de
 cd simulator && npm run bots
 ```
 
-This connects Anna, Jonas and Maria (through Toxiproxy on `:4001`). They speak with prerecorded voices from `simulator/samples/`.
+This connects Anna, Jonas and Maria (through Toxiproxy on `:4001`). They speak with prerecorded voices from `simulator/samples/`. Use `SERVER=http://localhost:3000 npm run bots` to bypass Toxiproxy and talk to the server directly.
+
+`<name>` is `anna`, `jonas`, or `maria`.
 
 | Command | What it does |
 |---|---|
-| `anna talk 6` | Anna talks live for 6s (screen 04 on your phone) |
+| `<name> talk <sec>` | e.g. `anna talk 6` — that bot talks live for 6s (screen 04 on your phone), or records-and-sends if its link is bad |
+| `<name> leave` | Takes that bot off the channel (changes the online count) |
+| `<name> join` | Brings that bot back onto the channel |
 | `race` | Countdown, then Anna presses on GO. Press at GO on your phone and you lose a real race (screen 08). It works by delaying what the phone receives by 1.5s, so the phone can't see that Anna got there first. |
-| `jonas leave` / `jonas join` | Changes the online count |
-| `auto on` | Random chatter |
-| `status` | Who is online and each bot's outbox |
+| `auto on` | Random chatter: a random online bot talks every 10–20s |
+| `auto off` | Stops the random chatter |
+| `status` | Who is online and each bot's outbox/message counts |
+| `help` | Shows this command list |
+| `quit` / `exit` | Disconnects all bots and exits |
 
 ## Automated resilience tests
 
