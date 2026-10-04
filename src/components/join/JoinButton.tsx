@@ -34,35 +34,6 @@ export function JoinButton({ submit, name, isEditing }: JoinButtonProps) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Design.color.ground },
-  body: {
-    flex: 1,
-    paddingTop: Design.space.xxxlarge,
-    paddingHorizontal: Design.space.large,
-    paddingBottom: Design.space.xlarge,
-    gap: Design.space.xlarge,
-  },
-  title: { ...Design.typography.headline, color: Design.color.ink },
-  field: {
-    backgroundColor: Design.color.white,
-    borderWidth: 2,
-    borderColor: Design.color.ink,
-    borderRadius: Design.radius.field,
-    paddingTop: Design.space.medium,
-    paddingHorizontal: Design.space.regular,
-    paddingBottom: Design.space.regular,
-    gap: Design.space.xsmall,
-  },
-  label: {
-    fontFamily: Design.fontFamily.bold,
-    fontSize: Design.fontSize.xxxxsmall,
-    letterSpacing: Design.letterSpacing(0.14, Design.fontSize.xxxxsmall),
-    color: Design.color.neutral700,
-  },
-  input: { ...Design.typography.input, color: Design.color.ink, padding: 0, lineHeight: 33 },
-  spacer: { flex: 1 },
-  foot: { flexDirection: 'row', alignItems: 'center', gap: Design.space.small },
-  footText: { ...Design.typography.meta, color: Design.color.neutral700 },
   cta: {
     height: 80,
     borderRadius: Design.radius.phone,
