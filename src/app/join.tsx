@@ -1,17 +1,18 @@
-import { ArrowRight, History } from 'lucide-react-native';
-import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { JoinButton } from '@/components/join/JoinButton';
+import { NameField } from '@/components/join/NameField';
 import { NamePreview } from '@/components/NamePreview';
 import { TopBar } from '@/components/TopBar';
 import { CHANNEL_NAME } from '@/config';
-import { useOnlineCount } from '@/hooks/useOnlineCount';
 import { registry } from '@/services/registry';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { selectName } from '@/store/selectors';
 import { setName } from '@/store/slices/session';
 import { Design } from '@/theme/Design';
+import { router, useLocalSearchParams } from 'expo-router';
+import { History } from 'lucide-react-native';
+import { useState } from 'react';
+import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 /**
  * 01: a name and a live preview of how others see you.
@@ -22,9 +23,8 @@ export default function Join() {
   const savedName = useAppSelector(selectName);
   const dispatch = useAppDispatch();
   const [draft, setDraft] = useState(isEditing ? (savedName ?? '') : '');
-  const online = useOnlineCount(isEditing);
+
   const name = draft.trim();
-  const buttonLabel = isEditing ? 'Save name' : `Join ${CHANNEL_NAME}`;
 
   const submit = () => {
     if (!name) return;
@@ -45,25 +45,7 @@ export default function Join() {
           <Text style={styles.title} accessibilityRole="header">
             What should the team call you?
           </Text>
-          <View style={styles.field}>
-            <Text style={styles.label}>NAME</Text>
-            <TextInput
-              value={draft}
-              onChangeText={setDraft}
-              autoFocus
-              autoCapitalize="words"
-              autoCorrect={false}
-              maxLength={24}
-              returnKeyType="go"
-              onSubmitEditing={submit}
-              placeholder="Your name"
-              placeholderTextColor={Design.color.neutral400}
-              selectionColor={Design.color.accent}
-              cursorColor={Design.color.accent}
-              accessibilityLabel="Your name"
-              style={styles.input}
-            />
-          </View>
+          <NameField draft={draft} onChangeText={setDraft} submit={submit} />
           <NamePreview name={name} />
           <View style={styles.spacer} />
           <View style={styles.foot}>
@@ -71,20 +53,7 @@ export default function Join() {
             <Text style={styles.footText}>Talk is recorded and kept for 30 days.</Text>
           </View>
         </View>
-        <Pressable
-          onPress={submit}
-          disabled={!name}
-          accessibilityRole="button"
-          accessibilityLabel={buttonLabel}
-          accessibilityState={{ disabled: !name }}
-          style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed, !name && styles.ctaDisabled]}
-        >
-          <Text style={styles.ctaText}>{buttonLabel}</Text>
-          <View style={styles.ctaRight}>
-            {online !== null && <Text style={styles.ctaOnline}>{online} online</Text>}
-            <ArrowRight size={20} color={Design.color.ground} strokeWidth={2} />
-          </View>
-        </Pressable>
+        <JoinButton submit={submit} name={name} isEditing={isEditing} />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
