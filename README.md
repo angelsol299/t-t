@@ -7,7 +7,7 @@ A push-to-talk walkie-talkie for care-home staff. Hold the button to talk live t
 - **`simulator/`:** network chaos scenarios (Toxiproxy), bot caregivers and automated resilience tests.
 - **`shared/`:** the wire protocol, the µ-law codec and the network state machine. The app, server, bots and tests all import these.
 
-How it stays resilient, and the UX decisions behind it, are in **[RESILIENCE.md](RESILIENCE.md)**.
+How the pieces fit together is in **[ARCHITECTURE.md](ARCHITECTURE.md)**. How it stays resilient, and the UX decisions behind it, are in **[RESILIENCE.md](RESILIENCE.md)**.
 
 ## Prerequisites
 
@@ -84,6 +84,96 @@ npm run sim -- status      # what is active right now
 ```
 
 Each scenario resets the link first. Add `--target bots` or `--target all` to degrade the bots instead of, or as well as, the phone. Ctrl-C on a running scenario restores a clean link.
+
+For it to mean anything, run these against a **real Android device on your wifi** (see "Physical
+phone" above), not the emulator — emulator-to-host networking doesn't behave like real wifi.
+
+## Test on older/slower devices
+
+This app leans on the JS thread for a lot at once while talking: mic encoding, live playback,
+socket/outbox handling, and a re-rendering message list. That only shows up as dropped audio or a
+sluggish button on hardware that's actually slow, not in the simulator (which degrades the
+*network*, not the CPU) and not in a fast dev machine's emulator.
+
+- **Prefer a real low-end or old device** over an emulator — JS-thread contention, GC pauses, and
+  audio-buffer underruns on `react-native-audio-api` don't reproduce reliably on fast hardware. If
+  you don't own one, Firebase Test Lab or BrowserStack App Live rent real low-end Android devices
+  by the minute.
+- **Or use a resource-constrained AVD** as a cheaper proxy. It's not a perfect stand-in for an old
+  chipset, but a low-RAM, software-rendered, old-API emulator surfaces JS-thread starvation that a
+  modern AVD never will. There's already one set up: **`Teton_LowSpec`** — Android 8.0 (API 26), a
+  Nexus 5 profile, 1.5GB RAM, 2 cores, software-rendered GPU (`swiftshader_indirect`), on
+  `arm64-v8a` (use `x86_64` instead if you're on an Intel Mac). Boot it, then build and install the
+  dev client onto it the same way as any other device — **Expo Go won't work here either** (see
+  Prerequisites above: the native audio module needs a real development build):
+  ```bash
+  emulator -avd Teton_LowSpec &          # boot it first; leave it running
+  npx expo run:android --device Teton_LowSpec   # builds, installs, and starts Metro
+  ```
+  If you already have another emulator or a physical device connected, `--device` (with no value)
+  opens a picker instead of guessing which one you meant; pass the AVD name to skip straight to it.
+  Once it's running, degrade the network against it with the simulator exactly as you would on a
+  physical phone (see "Simulate a bad network" above) — same app, same protocol, just on
+  constrained hardware.
+
+  To recreate the AVD (or build a similarly constrained one of your own), download a system image and
+  create the AVD:
+  ```bash
+  sdkmanager --sdk_root="$ANDROID_HOME" "system-images;android-26;google_apis;arm64-v8a"
+  avdmanager create avd -n Teton_LowSpec -k "system-images;android-26;google_apis;arm64-v8a" \
+    --device "Nexus 5" --sdcard 512M --force
+  ```
+  **If `avdmanager` fails with `Error: Package path is not valid. Valid system image paths are:
+  null`** (a real bug we hit in current `cmdline-tools`, independent of the package actually being
+  installed correctly): first make sure `~/.android/repositories.cfg` exists (`touch` it if not —
+  its absence alone can trigger this). If it still fails, skip `avdmanager` entirely and hand-write
+  the AVD's two config files, which is all `avdmanager` would have produced anyway — the `emulator`
+  binary doesn't call into `avdmanager` at runtime, it only reads these:
+  ```bash
+  mkdir -p ~/.android/avd/Teton_LowSpec.avd
+  cat > ~/.android/avd/Teton_LowSpec.ini <<EOF
+  avd.ini.encoding=UTF-8
+  path=$HOME/.android/avd/Teton_LowSpec.avd
+  path.rel=avd/Teton_LowSpec.avd
+  target=android-26
+  EOF
+  cat > ~/.android/avd/Teton_LowSpec.avd/config.ini <<EOF
+  AvdId=Teton_LowSpec
+  abi.type=arm64-v8a
+  avd.ini.encoding=UTF-8
+  disk.dataPartition.size=2G
+  hw.cpu.arch=arm64
+  hw.cpu.ncore=2
+  hw.device.manufacturer=Google
+  hw.device.name=Nexus 5
+  hw.gpu.enabled=yes
+  hw.gpu.mode=swiftshader_indirect
+  hw.keyboard=yes
+  hw.lcd.density=480
+  hw.lcd.height=1920
+  hw.lcd.width=1080
+  hw.ramSize=1536
+  hw.sdCard=yes
+  image.sysdir.1=system-images/android-26/google_apis/arm64-v8a/
+  sdcard.size=512M
+  skin.name=1080x1920
+  tag.id=google_apis
+  target=android-26
+  EOF
+  ```
+  Either way, once it boots, check it actually landed on the specs you asked for:
+  `adb shell getprop ro.build.version.release` (`8.0.0`), `adb shell cat /proc/meminfo` (should
+  show the ~1.5GB you set, not the host's RAM).
+- **Test a release build, not dev.** `npx expo run:android --variant release` (or an EAS build).
+  Dev mode's unminified bundle and dev-tools bridge make everything slower in a way that doesn't
+  correlate with what an old device actually struggles with.
+- **Watch for frame drops while actually talking**, not just idle: shake the device → "Show Perf
+  Monitor" for JS/UI FPS, or attach Android Studio's CPU Profiler, while holding the PTT button,
+  receiving live relayed audio, *and* scrolling the message list at the same time — that's the
+  worst case, with mic encoding, audio playback, socket handling, and list re-renders all
+  competing for the JS thread.
+- **Combine both axes.** A weak-wifi scenario (`npm run sim -- weak`) running *against* this AVD
+  is closer to a real care-home phone than either condition alone.
 
 ## Bot caregivers
 
