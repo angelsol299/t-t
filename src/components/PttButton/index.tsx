@@ -1,7 +1,7 @@
 import type { PushToTalkState } from '@/store/selectors';
 import { Design } from '@/theme/Design';
 import { Linking, Pressable, StyleSheet } from 'react-native';
-import { Face } from './Faces/faces';
+import { Face } from './Faces';
 import { lookFor } from './look';
 import { accessibilityLabelFor } from './utils';
 
