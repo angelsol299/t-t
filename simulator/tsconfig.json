@@ -9,5 +9,5 @@
     "allowImportingTsExtensions": true,
     "types": ["node"]
   },
-  "include": ["src", "tests", "../shared"]
+  "include": ["src", "tests", "scripts", "../shared"]
 }

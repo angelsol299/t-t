@@ -13,7 +13,7 @@ while (off < buf.length) {
     const out = new Uint8Array(sampleCount);
     for (let index = 0; index < sampleCount; index++) out[index] = encodeSample(buf.readInt16LE(off + 8 + index * 2));
     fs.writeFileSync(output, out);
-    console.log(`${output}: ${(n / 8000).toFixed(1)}s`);
+    console.log(`${output}: ${(sampleCount / 8000).toFixed(1)}s`);
     process.exit(0);
   }
   off += 8 + size + (size % 2);
