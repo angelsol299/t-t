@@ -1,9 +1,11 @@
-import { Mic, MicOff } from 'lucide-react-native';
-import { StyleSheet, Text, View } from 'react-native';
 import type { PushToTalkState } from '@/store/selectors';
 import { Design } from '@/theme/Design';
-import { LevelMeter } from './LevelMeter';
-import { TalkTimer } from './TalkTimer';
+import { MicOff } from 'lucide-react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { LevelMeter } from '../LevelMeter';
+import { TalkTimer } from '../TalkTimer';
+import { HoldToTalkFace } from './HoldToTalkFace';
+import { TalkingFace } from './TalkingFace';
 
 // What is written on the button in each state (screens 02–08). `color` is the
 // look's foreground (look.ts), so a face never decides its own colours.
@@ -50,46 +52,6 @@ export function Face({ state, color }: { state: PushToTalkState; color: string }
     case 'micOff':
       return <MicOffFace color={color} />;
   }
-}
-
-function HoldToTalkFace({ caption, color }: { caption: string; color: string }) {
-  return (
-    <>
-      <Text style={[styles.caption, { color }]}>{caption}</Text>
-      <View style={styles.bottom}>
-        <Text style={[styles.headline, { color }]}>{'Hold\nto talk'}</Text>
-        <Mic size={32} color={color} strokeWidth={2} />
-      </View>
-    </>
-  );
-}
-
-interface TalkingFaceProps {
-  title: string;
-  caption: string;
-  captionColor?: string;
-  headline: string;
-  startedAt: number;
-  level: number;
-  color: string;
-  warnColor: string;
-}
-
-/** While I'm talking, live or recording to send later. */
-function TalkingFace({ title, caption, captionColor, headline, startedAt, level, color, warnColor }: TalkingFaceProps) {
-  return (
-    <>
-      <View style={styles.top}>
-        <Text style={[styles.caption, { color }]}>{title}</Text>
-        <Text style={[styles.caption, { color: captionColor ?? color }]}>{caption}</Text>
-      </View>
-      <LevelMeter level={level} bars={16} color={color} />
-      <View style={styles.bottom}>
-        <Text style={[styles.headline, { color }]}>{headline}</Text>
-        <TalkTimer startedAt={startedAt} color={color} warnColor={warnColor} />
-      </View>
-    </>
-  );
 }
 
 /** 04: someone else is talking. */
